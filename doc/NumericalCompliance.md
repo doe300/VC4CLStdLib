@@ -1,13 +1,12 @@
 
 ## Numerical Compliance
 
-See [What Every Computer Scientist Should Know About Floating-Point Arithmetic](https://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg.html).
 
 ### Rounding modes
 **TODO** how does the VideoCore IV round?? Test for not representable floating-point numbers
 
 ### Inf, NaN, Denormals
-* Inf is supported
+* Inf is supported (by SFU)
 * NaN is not supported
 
 ### Relative Error
@@ -21,8 +20,8 @@ The relative ULP is 2^?24 ? 5.96e-08 [[1]](https://en.wikipedia.org/wiki/Machine
 So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wikipedia.org/wiki/Single-precision_floating-point_format)
 
 ### Built-in Functions
-| Function	 | Allowed (in ULP) | Maximal error | Details |
-|------------|-----------|------------|
+| Function	 | Allowed (in ULP) | Maximal error |
+|------------|------------------|---------------|
 | x + y | correctly rounded |
 | x - y | correctly rounded |
 | 1.0 / x | 3 |
@@ -106,7 +105,6 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | half_sin | 8192 |
 | half_sqrt | 8192 |
 | half_tan | 8192 |
-
 | native_cos | impl.-defined |
 | native_divide | impl.-defined |
 | native_exp | impl.-defined |
@@ -130,5 +128,5 @@ Calculations of ULP are done via one of the following methods:
 * Calculating the result for the functions with the native C implementation and the custom approximation and checking the difference ( **On host only**)
 
 ### Edge case behavior
-**TODO**
-page 325
+
+*Currently not supported*

@@ -1,8 +1,0 @@
-Mathematical functions:
-- improve performance
-	sources: 
-	- http://gams.nist.gov/cgi-bin/serve.cgi/ (especially C)
-	- http://www.netlib.org/fdlibm/
-- handling of edge cases
-
-Update pages numeric compliance and standard library

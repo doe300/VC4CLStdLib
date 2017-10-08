@@ -4,6 +4,7 @@
 Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/), section OpenCL Compiler -> Built-in Functions
 
 ### Async Copy and Prefetch Functions
+| Function | Implementation | Remarks |
 |-------------------------------|---------------------------|-------------|
 | async_work_group_copy			| read/write of DMA block	| *only executed by the first work-item* |
 | async_work_group_strided_copy	| per-item copy				| *only executed by the first work-item* |
@@ -11,6 +12,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | prefetch						| *no-op*					||
 
 ### Common Functions
+| Function | Implementation | Remarks |
 |-----------|-----------------------------------|-------------|
 | clamp		| fmin(fmax(a,min), max)			||
 | degrees	| fmul(a, 180/PI)					||
@@ -23,12 +25,14 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | step		| a < edge ? 0.0 : 1.0				||
 
 ### Explicit Memory Fence Functions
+| Function | Implementation | Remarks |
 |-------------------|-------------------|-------------|
 | mem_fence			| *no-op*			| *memory-access will already be committed immediately* |
 | read_mem_fence	| *no-op*			| *memory-access will already be committed immediately* |
 | write_mem_fence	| *no-op*			| *memory-access will already be committed immediately* |
 
 ### Geometric Functions
+| Function | Implementation | Remarks |
 |---------------|-----------------------------------|-------------|
 | cross			| *a x b*							||
 | dot			| *a &middot; b*					||
@@ -40,6 +44,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | fast_normalize| fmul(a, half_rsqrt(dot(a,a)))		||
 
 ### Image Functions
+| Function | Implementation | Remarks |
 |-------------------------------|-------------------|-------------|
 | read_imagef					| *not supported*	| *all versions, int and float coordinates, 1D, 2D and 3D, single and array, with and without sampler* |
 | read_imagei					| *not supported*	| *all versions, int and float coordinates, 1D, 2D and 3D, single and array, with and without sampler* |
@@ -56,6 +61,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | get_image_array_size			| *not supported*	| *all versions* |
 
 ### Integer Functions
+| Function | Implementation | Remarks |
 |-----------|---------------------------------------|-------------|
 | abs		| max(a, -a)							||
 | abs_diff	| *see pocl*							||
@@ -77,6 +83,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | upsample	| or(shl(hi, 8|16), lo)					||
 
 ### Math Functions
+| Function | Implementation | Remarks |
 |---------------|-----------------------------------|-------------|
 | acos			| fsub(M_PI/2.0f, asin(a))			||
 | acosh			| *via logarithm*					||
@@ -173,12 +180,14 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | trunc			|									||
 
 ### Misc. Vector Functions
+| Function | Implementation | Remarks |
 |-----------|-------------------------------|-------------|
 | shuffle	| shuffle2(a, a, b)				||
 | shuffle2	| *via intrinsics*				| *uses vector-rotations* |
 | vec_step	| *compiler-intrinsic*			||
 
 ### Relational Functions
+| Function | Implementation | Remarks |
 |---------------|-------------------------------|-------------|
 | isequal		| xor(a, b) == 0				| *true = 1 for scalar and -1 for vectors* |
 | isnotequal	| xor(a, b) != 0				| *true = 1 for scalar and -1 for vectors* |
@@ -200,10 +209,12 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | select		| msb(c) ? b : a				||
 
 ### Synchronization Function
+| Function | Implementation | Remarks |
 |---------------|-----------|-------------|
 | barrier		| 			| ** Via semaphores per work-item, increase all other, then wait for own (#work-items times) ** |
 
 ### Vector Data Load and Store Functions
+| Function | Implementation | Remarks |
 |---------------|---------------------------------------|-------------|
 | vloadn		| load(add(b, mul(a, vector-size))		| (a * vector-count + b)* |
 | vload_half	| *not supported*						||
@@ -216,6 +227,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 
 
 ### Work-Item Functions
+| Function | Implementation | Remarks |
 |-------------------|-------------------|-------------|
 | get_global_id		| *register-read*	| *passed via UNIFORM* |
 | get_global_size	| *register-read*	| *passed via UNIFORM* |
@@ -227,6 +239,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | get_work_dim		| *register-read*	| *passed via UNIFORM* |
 
 ### Atomic Functions
+| Function | Implementation | Remarks |
 |-------------------|---------------------------------------------------|--------------------------|
 | atomic_add		| old =	\*p, \*p = add(old, val)					| *enclosed in global mutex-lock* |
 | atomic_sub		| old = \*p, \*p = sub(old, val)					| *enclosed in global mutex-lock* |
