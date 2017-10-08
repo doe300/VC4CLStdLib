@@ -30,7 +30,7 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | acospi | 5 |
 | asin | 4 |
 | asinpi | 5 |
-| atan | 5 | 
+| atan | 5 | 1 |
 | atan2 | 6 | 
 | atanpi | 5 | 
 | atan2pi | 6 |
@@ -40,12 +40,12 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | cbrt | 4 |
 | ceil | correctly rounded |
 | copysign | 0 |
-| cos | 4 |
-| cosh | 4 |
+| cos | 4 | 2 |
+| cosh | 4 | 2 |
 | cospi | 4 |
 | erfc | 16 |
-| erf | 16 | 
-| exp | 4 |
+| erf | 16 | 1 |
+| exp | 4 | 1 |
 | exp2 | 4 |
 | exp10 | 4 |
 | expm1 | 4 |
@@ -61,7 +61,7 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | hypot | 4 |
 | ilogb | 0 |
 | ldexp | correctly rounded |
-| log | 4 |
+| log | 4 | 4 |
 | log2 | 4 |
 | log10 | 4 |
 | log1p | 4 |
@@ -80,44 +80,44 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | rint | correclty rounded |
 | rootn | 16 |
 | round | correclty rounded |
-| rsqrt | 4 |
-| sin | 4 |
-| sincos | 4 (both) |
-| sinh | 4 |
+| rsqrt | 4 | 1 |
+| sin | 4 | 1 |
+| sincos | 4 (both) | 2 |
+| sinh | 4 | 2 |
 | sinpi | 4 |
-| sqrt | 4 |
+| sqrt | 4 | 1 |
 | tan | 5 |
 | tanh | 5 |
 | tanpi | 6 |
 | tgamma | 16 |
 | trunc | correctly rounded |
 | half_cos | 8192 |
-| half_divide | 8192 |
-| half_exp | 8192 |
-| half_exp2 | 8192 |
-| half_exp10 | 8192 |
-| half_log | 8192 |
-| half_log2 | 8192 |
-| half_log10 | 8192 |
-| half_powr | 8192 |
-| half_recip | 8192 |
-| half_rsqrt | 8192 |
+| half_divide | 8192 | 8192 |
+| half_exp | 8192 | 8192 |
+| half_exp2 | 8192 | 8192 |
+| half_exp10 | 8192 | 8192 |
+| half_log | 8192 | 8192 |
+| half_log2 | 8192 | 8192 |
+| half_log10 | 8192 | 8192 |
+| half_powr | 8192 | 8192 |
+| half_recip | 8192 | 8192 |
+| half_rsqrt | 8192 | 8192 |
 | half_sin | 8192 |
 | half_sqrt | 8192 |
 | half_tan | 8192 |
 | native_cos | impl.-defined |
-| native_divide | impl.-defined |
-| native_exp | impl.-defined |
-| native_exp2 | impl.-defined |
-| native_exp10 | impl.-defined |
-| native_log | impl.-defined |
-| native_log2 | impl.-defined |
-| native_log10 | impl.-defined |
-| native_powr | impl.-defined |
-| native_recip | impl.-defined |
-| native_rsqrt | impl.-defined |
+| native_divide | impl.-defined | 8192 |
+| native_exp | impl.-defined | 8192 |
+| native_exp2 | impl.-defined | 8192 |
+| native_exp10 | impl.-defined | 8192 |
+| native_log | impl.-defined | 8192 |
+| native_log2 | impl.-defined | 8192 |
+| native_log10 | impl.-defined | 8192 |
+| native_powr | impl.-defined | 8192 |
+| native_recip | impl.-defined | 8192 |
+| native_rsqrt | impl.-defined | 8192 |
 | native_sin | impl.-defined |
-| native_sqrt | impl.-defined |
+| native_sqrt | impl.-defined | 8192 |
 | native_tan | impl.-defined |
 
 [OpenCL 1.2 FULL PROFILE](https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf#page=320)

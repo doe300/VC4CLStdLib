@@ -80,7 +80,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | rhadd		| add(shr(add(a,b,1),1), carry-bit)		||
 | rotate	| ror(a, sub(32, b))					||
 | sub_sat	| clamp(sub(a, b), type_min, type_max)	||
-| upsample	| or(shl(hi, 8|16), lo)					||
+| upsample	| or(shl(hi, width), lo)				||
 
 ### Math Functions
 | Function | Implementation | Remarks |
