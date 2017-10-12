@@ -51,11 +51,11 @@
 #define cl_khr_local_int32_extended_atomics
 #endif
 #ifdef __IMAGE_SUPPORT__
-	#ifndef cl_khr_3d_image_writes
-		#define cl_khr_3d_image_writes
-	#endif
+#ifndef cl_khr_3d_image_writes
+#define cl_khr_3d_image_writes
+#endif
 #else
-	#undef cl_khr_3d_image_writes
+#undef cl_khr_3d_image_writes
 #endif
 
 //unsupported extensions or optional core features
@@ -84,9 +84,9 @@
 #define NULL ((void *)0)
 #endif
 
-    /*
-     * Math constants
-     */
+/*
+ * Math constants
+ */
 #define M_LOG210    3.01029995663981195214f /* log_2(10) */
 #undef NAN
 #define NAN         0x7fc00000U
