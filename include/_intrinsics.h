@@ -119,12 +119,73 @@ PURE uint vc4cl_global_id(uint dim);
  * In CLang, read_only and write_only image-types are separate types.
  * Also in CLang, OpenCL image-types are built-in opaque types
  */
+/*
+ * Texture Config Parameter 0
+ * Broadcom specification, table 15
+ *
+ * 0 - 3   | 4 bits  | Number of mipmap levels minus 1
+ * 4 - 7   | 4 bits  | texture data type (high bit is on config parameter 1)
+ * 8       | 1 bit   | flip texture Y axis
+ * 9       | 1 bit   | cube map mode
+ * 10 - 11 | 2 bits  | cache swizzle
+ * 12 - 31 | 20 bits | texture base pointer (multiple of 4KB)
+ */
 OVERLOAD_ALL_IMAGE_TYPES(CONST uint, vc4cl_image_basic_setup)
+/*
+ * Texture Config Parameter 1
+ * Broadcom specification, table 16
+ *
+ * 0 - 1   | 2 bits  | S (x-coord) wrap mode (0 = repeat, 1 = clamp, 2 = mirror, 3 = border)
+ * 2 - 3   | 2 bits  | T (y-coord) wrap mode (0 = repeat, 1 = clamp, 2 = mirror, 3 = border)
+ * 4 - 6   | 3 bits  | minification filter (interpolation)
+ * 7       | 1 bit   | magnification filter
+ * 8 - 18  | 11 bits | image width (0 = 2048)
+ * 19      | 1 bit   | flip ETC Y (per block)
+ * 20 - 30 | 11 bits | image height (0 = 248)
+ * 31      | 1 bit   | high bit of texture type
+ */
 OVERLOAD_ALL_IMAGE_TYPES(CONST uint, vc4cl_image_access_setup)
+/*
+ * Texture Config Parameters 2 and 3
+ * Broadcom specification, table 17
+ *
+ * Cube map stride:
+ * 0       | 1 bit   | disable automatic LOD, use bias only
+ * 12 - 29 | 18 bits | cube map stride (in multiples of 4KB)
+ * 30 - 31 | 2 bits  | value 1 for cube map stride
+ *
+ * Child image dimensions:
+ * 0 - 10  | 11 bits | child image width (0 = 2048, does not work, see errata HW-2753)
+ * 12 - 22 | 11 bits | child image height (0 = 2048, does not work, see errata HW-2753)
+ * 30 - 31 | 2 bits  | value 2 for child image dimensions
+ *
+ * Child image offsets:
+ * 0 - 10  | 11 bits | child image X offset
+ * 12 - 22 | 11 bits | child image Y offset
+ * 30 - 31 | 2 bits  | value 3 for child image offsets
+ */
 OVERLOAD_ALL_IMAGE_TYPES(CONST uint, vc4cl_image_extended_setup)
 CONST uint vc4cl_sampler_get_normalized_coords(sampler_t sampler);
 CONST uint vc4cl_sampler_get_addressing_mode(sampler_t sampler);
 CONST uint vc4cl_sampler_get_filter_mode(sampler_t sampler);
+/*
+ * Image read functions
+ *
+ * The parameter need to be floating-values in the range [0, 1] and are scaled to the width/height of the image
+ * The returned data is not necessarily uint32, but some 32 bits, their meaning needs to be read from the configuration
+ */
+uint vc4cl_image_read(read_only image1d_t image, float xCoord) OVERLOADABLE;
+uint vc4cl_image_read(read_only image2d_t image, float xCoord, float yCoord) OVERLOADABLE;
+//XXX like the scalar reads, vector-versions are supported, but not useful so far, since OpenCL cannot read several pixels at once
+
+/*
+ * Extracts the single components from the value read by vc4cl_image_read
+ */
+//CL_SNORM_INT8, CL_SIGNED_INT8
+char4 vc4cl_extract_components(uint pixel) OVERLOADABLE;
+//CL_UNORM_INT8
+uchar4 vc4cl_extract_components(uint pixel) OVERLOADABLE;
+
 
 
 /*
