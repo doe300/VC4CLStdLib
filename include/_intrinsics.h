@@ -178,15 +178,6 @@ uint vc4cl_image_read(read_only image1d_t image, float xCoord) OVERLOADABLE;
 uint vc4cl_image_read(read_only image2d_t image, float xCoord, float yCoord) OVERLOADABLE;
 //XXX like the scalar reads, vector-versions are supported, but not useful so far, since OpenCL cannot read several pixels at once
 
-/*
- * Extracts the single components from the value read by vc4cl_image_read
- */
-//CL_SNORM_INT8, CL_SIGNED_INT8
-char4 vc4cl_extract_components(uint pixel) OVERLOADABLE;
-//CL_UNORM_INT8
-uchar4 vc4cl_extract_components(uint pixel) OVERLOADABLE;
-
-
 
 /*
  * Type conversions
