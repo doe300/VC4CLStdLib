@@ -120,6 +120,7 @@ So e.g. nextafter(1, 2) will return 1 + 2^-23 ? 1.000000119 [[2]](https://en.wik
 | native_sqrt | impl.-defined | 8192 |
 | native_tan | impl.-defined |
 
+Sources: 
 [OpenCL 1.2 FULL PROFILE](https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf#page=320)
 [OpenCL 1.2 EMBEDDED PROFILE](https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf#page=346)
 

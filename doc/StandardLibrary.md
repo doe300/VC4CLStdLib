@@ -124,12 +124,12 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | fmin			| fmin(a, b)						||
 | fmod			| *see reference*					| *fsub(x, fmul(y, trunc(fdiv(x,y))))* |
 | fract			| *see reference*					| *fmin(a - floor(a), 0x1.fffffep - 1f ), \*b = floor(a)* |
-| frexp			| **TBD**							||
+| frexp			| *via ilogb and ldexp*				||
 | hypot			| sqrt(fadd(fmul(a, a), fmul(b, b)))| **no special over-/underflow handling** |
 | ilogb			| and(shr(a, 23), 0xFF)				||
 | ldexp			| fmul(a, i2f(shl(1, and(b, 31))))	| *a \* 2 ^ b* |
 | lgamma		| 		  							| *see [Numerical Recipes in C](http://www.nrbook.com/a/bookcpdf.html), chapter 6.1* |
-| lgamma_r		| **TBD**							||
+| lgamma_r		| *via lgamma*						||
 | log			| fmul(log2(a), 1.0/M_LOG2E)		||
 | half_log		| native_log(a)						| *SFU seems to be exact enough* |
 | native_log	| fmul(native_log2(a), 1/M_LOG2E)	||
@@ -140,22 +140,22 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | half_log10	| native_log10(a)					| *SFU seems to be exact enough* |
 | native_log10	| fmul(native_log2(a), 1/M_LOG210)	||
 | log1p			| log(fadd(1,a))					||
-| logb			| **TBD**							||
+| logb			| itof(ilogb(a))					||
 | mad			| fadd(fmul(a, b), c)				||
 | maxmag		| *see reference*					||
 | minmag		| *see reference*					||
-| modf			| **TBD**							||
+| modf			| sub(a, trunc(a), trunc(a)			||
 | nan			| and(NaN, a)						||
-| nextafter		| **TBD**							||
-| pow			| **TBD**							||
-| pown			| **TBD**							||
+| nextafter		| bitcast_float(bitcast_int(a) + 1))||
+| pow			| *via powr*						||
+| pown			| *fast power*						| **very inefficient for vector-types!** |
 | powr			| exp(fmul(b, log(a)))				||
 | half_powr		| powr(a,b)							||
 | native_powr	| native_exp2(fmul(b, native_log2(a)))||
 | half_recip	| native_recip(a)					| *SFU seems to be exact enough* |
 | native_recip	| SFU_RECIP(a)						||
-| remainder		| **TBD**							||
-| remquo		| **TBD**							||
+| remainder		| sub(a, mul(rint(div(a, b)), b))	||
+| remquo		| *via rint and bit-twiddling*		||
 | rint			|									||
 | round			|									||
 | rootn			| pow(a, fdiv(1, itof(b)))			| *Newton-Verfahren* |
@@ -176,7 +176,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 | native_tan	| tan(a)							||
 | tanh			| *Taylor-series*					||
 | tanpi			| tan(fmul(a, M_PI))				||
-| tgamma		| **TBD**							| **exp(lgamma(a) ??** |
+| tgamma		| exp(lgamma(a))					||
 | trunc			|									||
 
 ### Misc. Vector Functions
@@ -211,7 +211,7 @@ Source: [OpenCL 1.2 Reference Pages](https://www.khronos.org/registry/cl/sdk/1.2
 ### Synchronization Function
 | Function | Implementation | Remarks |
 |---------------|-----------|-------------|
-| barrier		| 			| ** Via semaphores per work-item, increase all other, then wait for own (#work-items times) ** |
+| barrier		| 			| **via semaphores per work-item, increase all other, then wait for own (#work-items times)** |
 
 ### Vector Data Load and Store Functions
 | Function | Implementation | Remarks |
