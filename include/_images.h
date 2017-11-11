@@ -156,7 +156,7 @@ INLINE CONST uint4 vc4cl_convert_from_image_to_uint(int4 color, int channel_type
 }
 
 INLINE CONST int4 vc4cl_convert_to_image_type(float4 color, int channel_type) OVERLOADABLE
-		{
+{
 	//see OpenCL 1.2, page 311:
 	/*
 	 * "write_imagef can only be used with image objects created with image_channel_data_type set to one of the predefined packed formats or set to
@@ -183,10 +183,10 @@ INLINE CONST int4 vc4cl_convert_to_image_type(float4 color, int channel_type) OV
 		default:
 			return 0;
 	}
-		}
+}
 
 INLINE CONST int4 vc4cl_convert_to_image_type(int4 color, int channel_type) OVERLOADABLE
-		{
+{
 	//see OpenCL 1.2, page 311:
 	/*
 	 * "write_imagei can only be used with image objects created with image_channel_data_type set to one of the following values:
@@ -204,10 +204,10 @@ INLINE CONST int4 vc4cl_convert_to_image_type(int4 color, int channel_type) OVER
 		default:
 			return 0;
 	}
-		}
+}
 
 INLINE CONST int4 vc4cl_convert_to_image_type(uint4 color, int channel_type) OVERLOADABLE
-		{
+{
 	//see OpenCL 1.2, page 311:
 	/*
 	 * "write_imageui can only be used with image objects created with image_channel_data_type set to one of the following values:
@@ -225,361 +225,63 @@ INLINE CONST int4 vc4cl_convert_to_image_type(uint4 color, int channel_type) OVE
 		default:
 			return 0;
 	}
-		}
+}
+
+INLINE CONST float vc4cl_normalize_coordinates(int coordinate, int dimension) OVERLOADABLE
+{
+	return ((float)coordinate) / ((float)dimension);
+}
+
+INLINE CONST float2 vc4cl_normalize_coordinates(int2 coordinate, int2 dimension) OVERLOADABLE
+{
+	return convert_float2(coordinate) / convert_float2(dimension);
+}
+
+INLINE CONST float4 vc4cl_normalize_coordinates(int4 coordinate, int4 dimension) OVERLOADABLE
+{
+	return convert_float4(coordinate) / convert_float4(dimension);
+}
+
+INLINE CONST int vc4cl_get_array_index(float coord, int array_size)
+{
+	//see OpenCL 1.2 specification, section 8.4 "Selecting an Image from an Image Array"
+	//TODO is the coordinate passed normalized or not?
+	return clamp((int)rint(coord), 0, array_size - 1);
+}
 
 /*
- * De-normalizes float-coordinates, if specified in the sampler
+ * Sets filter and wrap modes according to the values specified in the sampler
  */
-INLINE CONST float vc4cl_denormalize_coordinates(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE
-		{
-	if(vc4cl_sampler_get_normalized_coords(sampler) == CLK_NORMALIZED_COORDS_TRUE)
+INLINE CONST uint vc4cl_apply_sampler(uint access_setup, sampler_t sampler)
+{
+	//clear fields for filter and wrap-modes
+	uint setup = access_setup & 0xFFFFFF00;
+	//CLK_FILTER_LINEAR has value 0 for magnification and minification filter
+	if(vc4cl_sampler_get_filter_mode(sampler) == CLK_FILTER_NEAREST)
 	{
-		return get_image_width(image) * coord;
+		//CLK_FILTER_NEAREST has value 1 for magnification and minification filter
+		setup |= 0x00000090;
 	}
-	return coord;
-		}
-
-INLINE CONST float2 vc4cl_denormalize_coordinates(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE
-		{
-	if(vc4cl_sampler_get_normalized_coords(sampler) == CLK_NORMALIZED_COORDS_TRUE)
+	switch(vc4cl_sampler_get_addressing_mode(sampler))
 	{
-		return (float2)(get_image_width(image) * coord.x, get_image_height(image) * coord.y);
+		//CLK_ADDRESS_NONE has unspecified value for coordinates exceeding the image, leave at 0
+		//CLK_ADDRESS_REPEAT has value 0 for wrap modes, already set
+		case CLK_ADDRESS_CLAMP:
+			//Has value 1 for wrap modes
+			setup |= 0x00000005;
+			break;
+		case CLK_ADDRESS_CLAMP_TO_EDGE:
+			//Has value 3 for wrap modes
+			//XXX CLK_ADDRESS_CLAMP_TO_EDGE == wrap mode border?
+			setup |= 0x0000000F;
+			break;
+		case CLK_ADDRESS_MIRRORED_REPEAT:
+			//Has value 2 for wrap modes
+			setup |= 0x0000000A;
+			break;
 	}
-	return coord;
-		}
-
-INLINE CONST float4 vc4cl_denormalize_coordinates(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE
-		{
-	if(vc4cl_sampler_get_normalized_coords(sampler) == CLK_NORMALIZED_COORDS_TRUE)
-	{
-		return (float4)(get_image_width(image) * coord.x, get_image_height(image) * coord.y, get_image_depth(image) * coord.z, 0.0f);
-	}
-	return coord;
-		}
-
-/*
- * For CLK_FILTER_NEAREST, maps the float-coordinates to integer coordinates
- */
-INLINE CONST int vc4cl_filter_nearest(float coord) OVERLOADABLE
-		{
-	//see OpenCL 1.2, page 329
-	return (int)floor(coord);
-		}
-
-INLINE CONST int2 vc4cl_filter_nearest(float2 coord) OVERLOADABLE
-		{
-	//see OpenCL 1.2, page 329
-	return convert_int2(floor(coord));
-		}
-
-INLINE CONST int4 vc4cl_filter_nearest(float4 coord) OVERLOADABLE
-		{
-	//see OpenCL 1.2, page 329
-	return convert_int4(floor(coord));
-		}
-
-/*
- * Clamps the coordinates to the valid range
- */
-INLINE CONST int vc4cl_clamp_coordinates(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
-		{
-	//see OpenCL 1.2, page 295
-	/*
-	 * "CLK_ADDRESS_MIRRORED_REPEAT - [...] This addressing mode can only be used with normalized coordinates." -> skip for integer coordinates (de-normalized)
-	 * "CLK_ADDRESS_REPEAT - [...] This addressing mode can only be used with normalized coordinates." -> skip for integer coordinates (de-normalized)
-	 * "CLK_ADDRESS_CLAMP_TO_EDGE - out-of-range image coordinates are clamped to the extent."
-	 * "CLK_ADDRESS_CLAMP - out-of-range image coordinates will return a border color."
-	 * "CLK_ADDRESS_NONE"
-	 */
-	//see OpenCL 1.2, page 330
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP_TO_EDGE)
-	{
-		return clamp(coord, 0, get_image_width(image) - 1);
-	}
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP)
-	{
-		return clamp(coord, -1, get_image_width(image));
-	}
-	return coord;
-		}
-
-INLINE CONST int2 vc4cl_clamp_coordinates(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
-		{
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP_TO_EDGE)
-	{
-		return clamp(coord, (int2)0, (int2)(get_image_width(image) - 1, get_image_height(image) - 1));
-	}
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP)
-	{
-		return clamp(coord, (int2)-1, (int2)(get_image_width(image), get_image_height(image)));
-	}
-	return coord;
-		}
-
-INLINE CONST int4 vc4cl_clamp_coordinates(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
-		{
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP_TO_EDGE)
-	{
-		return clamp(coord, (int4)0, (int4)(get_image_width(image) - 1, get_image_height(image) - 1, get_image_depth(image) - 1, coord.w));
-	}
-	if(vc4cl_sampler_get_addressing_mode(sampler) == CLK_ADDRESS_CLAMP)
-	{
-		return clamp(coord, (int4)-1, (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), coord.w));
-	}
-	return coord;
-		}
-
-/*
- * Calculates the offset (in bytes) from the start of the data-segment to the pixel given by the coordinates
- */
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image1d_t image, int coord) OVERLOADABLE
-		{
-	return vc4cl_bitcast_uint(coord) * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image1d_t image, int coord) OVERLOADABLE
-		{
-	return vc4cl_bitcast_uint(coord) * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image1d_buffer_t image, int coord) OVERLOADABLE
-		{
-	return vc4cl_bitcast_uint(coord) * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image1d_buffer_t image, int coord) OVERLOADABLE
-		{
-	return vc4cl_bitcast_uint(coord) * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image1d_array_t image, int2 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image1d_array_t image, int2 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image2d_t image, int2 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image2d_t image, int2 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image2d_array_t image, int4 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + pitches.y * vc4cl_bitcast_uint(coord).z + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image2d_array_t image, int4 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + pitches.y * vc4cl_bitcast_uint(coord).z + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(read_only image3d_t image, int4 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + pitches.y * vc4cl_bitcast_uint(coord).z + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-INLINE CONST uint vc4cl_calculate_coordinate_offset(write_only image3d_t image, int4 coord) OVERLOADABLE
-		{
-	uint2 pitches = vc4cl_image_get_pitches(image);
-	return pitches.x * vc4cl_bitcast_uint(coord).y + pitches.y * vc4cl_bitcast_uint(coord).z + vc4cl_bitcast_uint(coord).x * vc4cl_get_channel_type_size(get_image_channel_data_type(image)) * vc4cl_get_channel_order_size(get_image_channel_order(image));
-		}
-
-/*
- * General process of reading image:
- * 1. convert coordinates to de-normalized
- * 2. check if coordinates are within in limits of image-borders
- * 2.1 apply method defined in sampler to handle overflows
- * 3. access the values at/around the given coordinates
- * 3.1 calculate address from coordinates, channel-type and channel-order
- * 3.2 interpolate with the method specified in sampler
- * 4. convert the result to the return-type
- * 4.1 fill vector-elements with corresponding values
- */
-
-INLINE float4 read_imagef(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
-		{
-	//see OpenCL 1.2, pages 297/298
-	/*
-	 * "The read_imagef (read_image[u]i) calls that take integer coordinates must use a sampler with filter mode set to
-	 *  CLK_FILTER_NEAREST, normalized coordinates set to CLK_NORMALIZED_COORDS_FALSE and addressing mode set to
-	 *  CLK_ADDRESS_CLAMP_TO_EDGE, CLK_ADDRESS_CLAMP or CLK_ADDRESS_NONE; otherwise the values returned are undefined."
-	 *  -> For integer coordinates, no interpolation/de-normalization is required
-	 */
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int2 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
-
-//    INLINE float4 read_imagef(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE
-//	{
-//    	int channel_type = get_image_channel_data_type(image);
-//		uint type_size = vc4cl_get_channel_type_size(channel_type);
-//		uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-//		int2 filteredCoord;
-//		if(vc4cl_sampler_get_filter_mode(sampler) == CLK_FILTER_NEAREST)
-//		{
-//			filteredCoord = vc4cl_filter_nearest(coord);
-//			int2 clampedCoord = vc4cl_clamp_coordinates(image, sampler, filteredCoord);
-//			uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-//			void* addr = vc4cl_image_get_data_address(image) + offset;
-//			int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-//			return vc4cl_convert_from_image_to_float(image_color, channel_type);
-//		}
-//		else
-//		{
-//			//CLK_FILTER_LINEAR -> interpolate
-//			//see OpenCL 1.2, page 331
-//			//TODO rewrite to handle according to combination of filter and addressing-mode
-//		}
-//	}
-
-INLINE int4 read_imagei(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int2 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
-
-int4 read_imagei(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE;
-
-INLINE uint4 read_imageui(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int2 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
-
-uint4 read_imageui(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE;
-
-INLINE float4 read_imagef(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int4 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
-
-float4 read_imagef(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE;
-
-INLINE int4 read_imagei(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int4 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
-
-int4 read_imagei(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE;
-
-INLINE uint4 read_imageui(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int4 clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
-
-uint4 read_imageui(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE;
-
-float4 read_imagef(read_only image2d_array_t image_array, sampler_t sampler, int4 coord) OVERLOADABLE;
-float4 read_imagef(read_only image2d_array_t image_array, sampler_t sampler, float4 coord) OVERLOADABLE;
-
-int4 read_imagei(read_only image2d_array_t image_array, sampler_t sampler, int4 coord) OVERLOADABLE;
-int4 read_imagei(read_only image2d_array_t image_array, sampler_t sampler, float4 coord) OVERLOADABLE;
-uint4 read_imageui(read_only image2d_array_t image_array, sampler_t sampler, int4 coord) OVERLOADABLE;
-uint4 read_imageui(read_only image2d_array_t image_array, sampler_t sampler, float4 coord) OVERLOADABLE;
-
-INLINE float4 read_imagef(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
-
-float4 read_imagef(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE;
-
-INLINE int4 read_imagei(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
-
-int4 read_imagei(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE;
-
-INLINE uint4 read_imageui(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	int clampedCoord = vc4cl_clamp_coordinates(image, sampler, coord);
-	uint offset = vc4cl_calculate_coordinate_offset(image, clampedCoord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
-uint4 read_imageui(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE;
-
-float4 read_imagef(read_only image1d_array_t image_array, sampler_t sampler, int2 coord) OVERLOADABLE;
-float4 read_imagef(read_only image1d_array_t image_array, sampler_t sampler, float2 coord) OVERLOADABLE;
-
-int4 read_imagei(read_only image1d_array_t image_array, sampler_t sampler, int2 coord) OVERLOADABLE;
-int4 read_imagei(read_only image1d_array_t image_array, sampler_t sampler, float2 coord) OVERLOADABLE;
-uint4 read_imageui(read_only image1d_array_t image_array, sampler_t sampler, int2 coord) OVERLOADABLE;
-uint4 read_imageui(read_only image1d_array_t image_array, sampler_t sampler, float2 coord) OVERLOADABLE;
+	return setup;
+}
 
 /*
  * 6.12.14.3 Built-in Image Sampler-less Read Functions
@@ -591,204 +293,362 @@ uint4 read_imageui(read_only image1d_array_t image_array, sampler_t sampler, flo
  *  normalized coordinates set to CLK_NORMALIZED_COORDS_FALSE and
  *  addressing mode to CLK_ADDRESS_NONE."
  */
-
 INLINE float4 read_imagef(read_only image1d_t image, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+{
+	//TODO optimize by not setting the "default" sampler-modes, but setting them host-side? Need to set though, if image is accessed without and then with sampler!
+	return read_imagef(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE int4 read_imagei(read_only image1d_t image, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+{
+	return read_imagei(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE uint4 read_imageui(read_only image1d_t image, int coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+{
+	return read_imageui(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE float4 read_imagef(read_only image1d_buffer_t image, int coord) OVERLOADABLE
-		{
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE)));
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
+	float xCoord = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	int4 image_color = vc4cl_image_read(image, xCoord, type_size, channel_size);
 	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+}
 
 INLINE int4 read_imagei(read_only image1d_buffer_t image, int coord) OVERLOADABLE
-		{
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE)));
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
+	float xCoord = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	int4 image_color = vc4cl_image_read(image, xCoord, type_size, channel_size);
 	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+}
 
 INLINE uint4 read_imageui(read_only image1d_buffer_t image, int coord) OVERLOADABLE
-		{
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE)));
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
+	float xCoord = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	int4 image_color = vc4cl_image_read(image, xCoord, type_size, channel_size);
 	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+}
 
 INLINE float4 read_imagef(read_only image1d_array_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+{
+	return read_imagef(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE int4 read_imagei(read_only image1d_array_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+{
+	return read_imagei(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE uint4 read_imageui(read_only image1d_array_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+{
+	return read_imageui(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE float4 read_imagef(read_only image2d_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+{
+	return read_imagef(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE int4 read_imagei(read_only image2d_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+{
+	return read_imagei(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE uint4 read_imageui(read_only image2d_t image, int2 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+{
+	return read_imageui(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE float4 read_imagef(read_only image2d_array_t image, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+{
+	return read_imagef(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE int4 read_imagei(read_only image2d_array_t image, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+{
+	return read_imagei(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE uint4 read_imageui(read_only image2d_array_t image, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+{
+	return read_imageui(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE float4 read_imagef(read_only image3d_t image, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_float(image_color, channel_type);
-		}
+{
+	return read_imagef(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE int4 read_imagei(read_only image3d_t image, int4 coord) OVERLOADABLE
-		{
-	int channel_type = get_image_channel_data_type(image);
-	uint type_size = vc4cl_get_channel_type_size(channel_type);
-	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
-	return vc4cl_convert_from_image_to_int(image_color, channel_type);
-		}
+{
+	return read_imagei(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
 
 INLINE uint4 read_imageui(read_only image3d_t image, int4 coord) OVERLOADABLE
-		{
+{
+	return read_imageui(image, (CLK_FILTER_NEAREST|CLK_NORMALIZED_COORDS_FALSE|CLK_ADDRESS_NONE), coord);
+}
+
+/*
+ * 6.12.14.2 Built-in Image Read Functions:
+ *
+ * "The following built-in function calls to read images with a sampler are supported.
+ *
+ * * The built-in function calls to read images with a sampler are not supported for image1d_buffer_t image types."
+ *
+ */
+INLINE float4 read_imagef(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
-	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
-	void* addr = vc4cl_image_get_data_address(image) + offset;
-	int4 image_color = vc4cl_image_read_pixel(image, addr, type_size, channel_size);
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_float(image_color, channel_type);
+}
+
+INLINE float4 read_imagef(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imagef(image, sampler, coords);
+}
+
+INLINE int4 read_imagei(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_int(image_color, channel_type);
+}
+
+INLINE int4 read_imagei(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imagei(image, sampler, coords);
+}
+
+INLINE uint4 read_imageui(read_only image1d_t image, sampler_t sampler, float coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
 	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
-		}
+}
+
+INLINE uint4 read_imageui(read_only image1d_t image, sampler_t sampler, int coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imageui(image, sampler, coords);
+}
+
+INLINE float4 read_imagef(read_only image1d_array_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.x, vc4cl_get_array_index(coord.y, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_float(image_color, channel_type);
+}
+
+INLINE float4 read_imagef(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imagef(image, sampler, coords);
+}
+
+INLINE int4 read_imagei(read_only image1d_array_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.x, vc4cl_get_array_index(coord.y, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_int(image_color, channel_type);
+}
+
+INLINE int4 read_imagei(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imagei(image, sampler, coords);
+}
+
+INLINE uint4 read_imageui(read_only image1d_array_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.x, vc4cl_get_array_index(coord.y, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
+}
+
+INLINE uint4 read_imageui(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	return read_imageui(image, sampler, coords);
+}
+
+INLINE float4 read_imagef(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_float(image_color, channel_type);
+}
+
+INLINE float4 read_imagef(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imagef(image, sampler, coords);
+}
+
+INLINE int4 read_imagei(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_int(image_color, channel_type);
+}
+
+INLINE int4 read_imagei(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imagei(image, sampler, coords);
+}
+
+INLINE uint4 read_imageui(read_only image2d_t image, sampler_t sampler, float2 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
+}
+
+INLINE uint4 read_imageui(read_only image2d_t image, sampler_t sampler, int2 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imageui(image, sampler, coords);
+}
+
+INLINE float4 read_imagef(read_only image2d_array_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.xy, vc4cl_get_array_index(coord.z, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_float(image_color, channel_type);
+}
+
+INLINE float4 read_imagef(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imagef(image, sampler, coords);
+}
+
+INLINE int4 read_imagei(read_only image2d_array_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.xy, vc4cl_get_array_index(coord.z, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_int(image_color, channel_type);
+}
+
+INLINE int4 read_imagei(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imagei(image, sampler, coords);
+}
+
+INLINE uint4 read_imageui(read_only image2d_array_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord.xy, vc4cl_get_array_index(coord.z, get_image_array_size(image)), type_size, channel_size);
+	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
+}
+
+INLINE uint4 read_imageui(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	return read_imageui(image, sampler, coords);
+}
+
+INLINE float4 read_imagef(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_float(image_color, channel_type);
+}
+
+float4 read_imagef(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), 0));
+	return read_imagef(image, sampler, coords);
+}
+
+INLINE int4 read_imagei(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_int(image_color, channel_type);
+}
+
+INLINE int4 read_imagei(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), 0));
+	return read_imagei(image, sampler, coords);
+}
+
+INLINE uint4 read_imageui(read_only image3d_t image, sampler_t sampler, float4 coord) OVERLOADABLE
+{
+	vc4cl_set_image_access_setup(image, vc4cl_apply_sampler(vc4cl_image_access_setup(image), sampler));
+	int channel_type = get_image_channel_data_type(image);
+	uint type_size = vc4cl_get_channel_type_size(channel_type);
+	uint channel_size = vc4cl_get_channel_order_size(get_image_channel_order(image));
+	int4 image_color = vc4cl_image_read(image, coord, type_size, channel_size);
+	return vc4cl_convert_from_image_to_uint(image_color, channel_type);
+}
+
+INLINE uint4 read_imageui(read_only image3d_t image, sampler_t sampler, int4 coord) OVERLOADABLE
+{
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), 0));
+	return read_imageui(image, sampler, coords);
+}
 
 /*
  * General process of writing image (OpenCL 1.2, pages 310+):
@@ -799,7 +659,7 @@ INLINE uint4 read_imageui(read_only image3d_t image, int4 coord) OVERLOADABLE
  * 3. write into memory at given location
  */
 INLINE void write_imagef(write_only image2d_t image, int2 coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -807,10 +667,10 @@ INLINE void write_imagef(write_only image2d_t image, int2 coord, float4 color) O
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image2d_t image, int2 coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -818,10 +678,10 @@ INLINE void write_imagei(write_only image2d_t image, int2 coord, int4 color) OVE
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image2d_t image, int2 coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -829,10 +689,10 @@ INLINE void write_imageui(write_only image2d_t image, int2 coord, uint4 color) O
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagef(write_only image2d_array_t image_array, int4 coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -840,10 +700,10 @@ INLINE void write_imagef(write_only image2d_array_t image_array, int4 coord, flo
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image2d_array_t image_array, int4 coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -851,10 +711,10 @@ INLINE void write_imagei(write_only image2d_array_t image_array, int4 coord, int
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image2d_array_t image_array, int4 coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -862,10 +722,10 @@ INLINE void write_imageui(write_only image2d_array_t image_array, int4 coord, ui
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagef(write_only image1d_t image, int coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -873,10 +733,10 @@ INLINE void write_imagef(write_only image1d_t image, int coord, float4 color) OV
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image1d_t image, int coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -884,10 +744,10 @@ INLINE void write_imagei(write_only image1d_t image, int coord, int4 color) OVER
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image1d_t image, int coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -895,10 +755,10 @@ INLINE void write_imageui(write_only image1d_t image, int coord, uint4 color) OV
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagef(write_only image1d_buffer_t image, int coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -906,10 +766,10 @@ INLINE void write_imagef(write_only image1d_buffer_t image, int coord, float4 co
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image1d_buffer_t image, int coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -917,10 +777,10 @@ INLINE void write_imagei(write_only image1d_buffer_t image, int coord, int4 colo
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image1d_buffer_t image, int coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -928,10 +788,10 @@ INLINE void write_imageui(write_only image1d_buffer_t image, int coord, uint4 co
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagef(write_only image1d_array_t image_array, int2 coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -939,10 +799,10 @@ INLINE void write_imagef(write_only image1d_array_t image_array, int2 coord, flo
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image1d_array_t image_array, int2 coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -950,10 +810,10 @@ INLINE void write_imagei(write_only image1d_array_t image_array, int2 coord, int
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image1d_array_t image_array, int2 coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image_array);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -961,10 +821,10 @@ INLINE void write_imageui(write_only image1d_array_t image_array, int2 coord, ui
 	uint offset = vc4cl_calculate_coordinate_offset(image_array, coord);
 	void* addr = vc4cl_image_get_data_address(image_array) + offset;
 	vc4cl_image_write_pixel(image_array, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagef(write_only image3d_t image, int4 coord, float4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -972,10 +832,10 @@ INLINE void write_imagef(write_only image3d_t image, int4 coord, float4 color) O
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imagei(write_only image3d_t image, int4 coord, int4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -983,10 +843,10 @@ INLINE void write_imagei(write_only image3d_t image, int4 coord, int4 color) OVE
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
 INLINE void write_imageui(write_only image3d_t image, int4 coord, uint4 color) OVERLOADABLE
-		{
+{
 	int channel_type = get_image_channel_data_type(image);
 	uint type_size = vc4cl_get_channel_type_size(channel_type);
 	int4 converted_color = vc4cl_convert_to_image_type(color, channel_type);
@@ -994,35 +854,131 @@ INLINE void write_imageui(write_only image3d_t image, int4 coord, uint4 color) O
 	uint offset = vc4cl_calculate_coordinate_offset(image, coord);
 	void* addr = vc4cl_image_get_data_address(image) + offset;
 	vc4cl_image_write_pixel(image, addr, converted_color, type_size, channel_size);
-		}
+}
 
-/*
- * Don't map following functions to intrinsics, since they are handled quite nicely by SPIR-V
- */
+INLINE CONST int get_image_width(read_only image1d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(read_only image1d_buffer_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(read_only image2d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(read_only image3d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(read_only image1d_array_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(read_only image2d_array_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image1d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image1d_buffer_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image2d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image3d_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image1d_array_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
+INLINE CONST int get_image_width(write_only image2d_array_t image) OVERLOADABLE
+{
+	int width = (vc4cl_image_access_setup(image) >> 8) & 0x7FF;
+	return width == 0 ? 2048 : width;
+}
 
- CONST int get_image_width(read_only image1d_t image) OVERLOADABLE;
-CONST int get_image_width(read_only image1d_buffer_t image) OVERLOADABLE;
-CONST int get_image_width(read_only image2d_t image) OVERLOADABLE;
-CONST int get_image_width(read_only image3d_t image) OVERLOADABLE;
-CONST int get_image_width(read_only image1d_array_t image) OVERLOADABLE;
-CONST int get_image_width(read_only image2d_array_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image1d_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image1d_buffer_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image2d_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image3d_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image1d_array_t image) OVERLOADABLE;
-CONST int get_image_width(write_only image2d_array_t image) OVERLOADABLE;
-
-CONST int get_image_height(read_only image2d_t image) OVERLOADABLE;
-CONST int get_image_height(read_only image3d_t image) OVERLOADABLE;
-CONST int get_image_height(read_only image2d_array_t image) OVERLOADABLE;
-CONST int get_image_height(write_only image2d_t image) OVERLOADABLE;
-CONST int get_image_height(write_only image3d_t image) OVERLOADABLE;
-CONST int get_image_height(write_only image2d_array_t image) OVERLOADABLE;
+INLINE CONST int get_image_height(read_only image2d_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
+INLINE CONST int get_image_height(read_only image3d_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
+INLINE CONST int get_image_height(read_only image2d_array_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
+INLINE CONST int get_image_height(write_only image2d_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
+INLINE CONST int get_image_height(write_only image3d_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
+INLINE CONST int get_image_height(write_only image2d_array_t image) OVERLOADABLE
+{
+	int height = (vc4cl_image_access_setup(image) >> 20) & 0x7FF;
+	return height == 0 ? 2048 : height;
+}
 
 CONST int get_image_depth(read_only image3d_t image) OVERLOADABLE;
 CONST int get_image_depth(write_only image3d_t image) OVERLOADABLE;
 
+INLINE CONST int2 get_image_dim(read_only image2d_t image) OVERLOADABLE
+{
+	return (int2)(get_image_width(image), get_image_height(image));
+}
+INLINE CONST int2 get_image_dim(read_only image2d_array_t image) OVERLOADABLE
+{
+	return (int2)(get_image_width(image), get_image_height(image));
+}
+INLINE CONST int2 get_image_dim(write_only image2d_t image) OVERLOADABLE
+{
+	return (int2)(get_image_width(image), get_image_height(image));
+}
+INLINE CONST int2 get_image_dim(write_only image2d_array_t image) OVERLOADABLE
+{
+	return (int2)(get_image_width(image), get_image_height(image));
+}
+INLINE CONST int4 get_image_dim(read_only image3d_t image) OVERLOADABLE
+{
+	return (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), 0);
+}
+INLINE CONST int4 get_image_dim(write_only image3d_t image) OVERLOADABLE
+{
+	return (int4)(get_image_width(image), get_image_height(image), get_image_depth(image), 0);
+}
+
+/*
+ * Don't map following functions to intrinsics, since they are handled quite nicely by SPIR-V
+ */
 CONST int get_image_channel_data_type(read_only image1d_t image) OVERLOADABLE;
 CONST int get_image_channel_data_type(read_only image1d_buffer_t image) OVERLOADABLE;
 CONST int get_image_channel_data_type(read_only image2d_t image) OVERLOADABLE;
@@ -1049,13 +1005,8 @@ CONST int get_image_channel_order(write_only image3d_t image) OVERLOADABLE;
 CONST int get_image_channel_order(write_only image1d_array_t image) OVERLOADABLE;
 CONST int get_image_channel_order(write_only image2d_array_t image) OVERLOADABLE;
 
-CONST int2 get_image_dim(read_only image2d_t image) OVERLOADABLE;
-CONST int2 get_image_dim(read_only image2d_array_t image) OVERLOADABLE;
-CONST int2 get_image_dim(write_only image2d_t image) OVERLOADABLE;
-CONST int2 get_image_dim(write_only image2d_array_t image) OVERLOADABLE;
-CONST int4 get_image_dim(read_only image3d_t image) OVERLOADABLE;
-CONST int4 get_image_dim(write_only image3d_t image) OVERLOADABLE;
 
+//TODO how to handle? Need extra parameter??
 CONST size_t get_image_array_size(read_only image1d_array_t image_array) OVERLOADABLE;
 CONST size_t get_image_array_size(read_only image2d_array_t image_array) OVERLOADABLE;
 CONST size_t get_image_array_size(write_only image1d_array_t image_array) OVERLOADABLE;

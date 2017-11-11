@@ -111,6 +111,7 @@ SIMPLE_1(float, atanpi, float, val, atan(val) * M_1_PI_F)
 SIMPLE_2(float, atan2pi, float, x, float, y, atan2(x, y) * M_1_PI_F)
 
 //TODO different algorithm?
+//e.g. http://www.hackersdelight.org/hdcodetxt/acbrt.c.txt (acbrt1 with a few more Newton steps, but requires several floating-point divisions)
 SIMPLE_1(float, cbrt, float, val, pow(val, 1.0f/3.0f))
 
 COMPLEX_1(float, ceil, float, val,
@@ -608,7 +609,7 @@ COMPLEX_1(float, log, float, val,
 		MpowN *= M - 1.0f;
 	}
 
-	/* fix offset from log(M/1) to log(M) with adding log(2) */
+	/* fix offset from log(M/2) to log(M) with adding log(2) */
 	return logE + logM + M_LN2_F;
 })
 

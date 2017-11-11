@@ -49,17 +49,18 @@ SIMPLE_2(ushort, add_sat, ushort, x, ushort, y, vc4cl_bitcast_ushort(clamp(vc4cl
 SIMPLE_2(short, add_sat, short, x, short, y, vc4cl_bitcast_short(clamp(vc4cl_extend(x) + vc4cl_extend(y), SHRT_MIN, SHRT_MAX)))
 //based on pocl (pocl/lib/kernel/add_sat.cl)
 SIMPLE_2(uint, add_sat, uint, x, uint, y, x > ((result_t)UINT_MAX) - y ? UINT_MAX : x + y)
-COMPLEX_2(int, add_sat, int, x, int, y, 
-{
-	return ((x ^ y) < (result_t)0) ?
-		/* different signs: no over-/underflow */
-		x + y :
-		x > (result_t)0 ?
-			/* both positive: can overflow */
-			(x > ((result_t)INT_MAX) - y ? (result_t)INT_MAX : x + y) :
-			/* both negative: can underflow */
-			(x < ((result_t)INT_MIN) - y ? (result_t)INT_MIN : x + y);
-})
+//COMPLEX_2(int, add_sat, int, x, int, y,
+//{
+//	return ((x ^ y) < (result_t)0) ?
+//		/* different signs: no over-/underflow */
+//		x + y :
+//		x > (result_t)0 ?
+//			/* both positive: can overflow */
+//			(x > ((result_t)INT_MAX) - y ? (result_t)INT_MAX : x + y) :
+//			/* both negative: can underflow */
+//			(x < ((result_t)INT_MIN) - y ? (result_t)INT_MIN : x + y);
+//})
+SIMPLE_2(int, add_sat, int, x, int, y, vc4cl_saturated_add(x, y))
 
 //"Returns (x + y) >> 1.  The intermediate sum does not modulo overflow."
 //based on pocl (pocl/lib/kernel/hadd.cl)
@@ -77,10 +78,10 @@ SIMPLE_3_TWO_SCALAR(short, clamp, short, val, short, minval, short, maxval, min(
 SIMPLE_3_TWO_SCALAR(uint, clamp, uint, val, uint, minval, uint, maxval, min(max(val, minval), maxval))
 SIMPLE_3_TWO_SCALAR(int, clamp, int, val, int, minval, int, maxval, min(max(val, minval), maxval))
 
-SIMPLE_1(uchar, clz, uchar, x, vc4cl_bitcast_uchar(vc4cl_clz(vc4cl_zero_extend(x))))
-SIMPLE_1(char, clz, char, x, vc4cl_bitcast_char(vc4cl_clz(vc4cl_sign_extend(x))))
-SIMPLE_1(ushort, clz, ushort, x, vc4cl_bitcast_ushort(vc4cl_clz(vc4cl_zero_extend(x))))
-SIMPLE_1(short, clz, short, x, vc4cl_bitcast_short(vc4cl_clz(vc4cl_sign_extend(x))))
+SIMPLE_1(uchar, clz, uchar, x, vc4cl_bitcast_uchar(vc4cl_clz((vc4cl_and(x, (arg_t)0xFF) << 24) | 0xFFFFFF)))
+SIMPLE_1(char, clz, char, x, vc4cl_bitcast_char(vc4cl_clz((vc4cl_and(x, (arg_t)0xFF) << 24) | 0xFFFFFF)))
+SIMPLE_1(ushort, clz, ushort, x, vc4cl_bitcast_ushort(vc4cl_clz((vc4cl_and(x, (arg_t)0xFFFF) << 16) | 0xFFFF)))
+SIMPLE_1(short, clz, short, x, vc4cl_bitcast_short(vc4cl_clz((vc4cl_and(x, (arg_t)0xFFFF) << 16) | 0xFFFF)))
 SIMPLE_1(uint, clz, uint, x, vc4cl_bitcast_uint(vc4cl_clz(x)))
 SIMPLE_1(int, clz, int, x, vc4cl_bitcast_int(vc4cl_clz(x)))
 
@@ -131,10 +132,11 @@ SIMPLE_2_SCALAR(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 
 SIMPLE_INTEGER_2(mul_hi, a, b, vc4cl_mul_hi(a, b))
 
+SIMPLE_2(uchar, rotate, uchar, x, uchar, y, vc4c_pack_lsb(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
+//XXX has the correct result (in the LSB), but the other bytes still have the replicated value, not the sign-extension if the LSB
+SIMPLE_2(char, rotate, char, x, char, y, vc4cl_bitcast_char(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_sign_extend(y))))
 //TODO rotate with types < int is wrong!! Since the rotation is over all 32 bits, not just "used"
 //-> replicate (unpack) rotate, mask out rest (pack?)
-SIMPLE_2(uchar, rotate, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_ror(vc4cl_zero_extend(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
-SIMPLE_2(char, rotate, char, x, char, y, vc4cl_bitcast_char(vc4cl_ror(vc4cl_sign_extend(x), -vc4cl_sign_extend(y))))
 SIMPLE_2(ushort, rotate, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_ror(vc4cl_zero_extend(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
 SIMPLE_2(short, rotate, short, x, short, y, vc4cl_bitcast_short(vc4cl_ror(vc4cl_sign_extend(x), -vc4cl_sign_extend(y))))
 SIMPLE_2(uint, rotate, uint, x, uint, y, vc4cl_bitcast_uint(vc4cl_ror(x, -vc4cl_bitcast_int(y))))
@@ -146,16 +148,17 @@ SIMPLE_2(ushort, sub_sat, ushort, x, ushort, y, vc4cl_bitcast_ushort(clamp(vc4cl
 SIMPLE_2(short, sub_sat, short, x, short, y, vc4cl_bitcast_short(clamp(vc4cl_extend(x) - vc4cl_extend(y), SHRT_MIN, SHRT_MAX)))
 //based on pocl (pocl/lib/kernel/sub_sat.cl)
 SIMPLE_2(uint, sub_sat, uint, x, uint, y, x < y ? (result_t)0 : x - y)
-COMPLEX_2(int, sub_sat, int, x, int, y, {
-	return ((x ^ y) >= (result_t)0) ?
-		/* same sign: no over-/underflow */
-		x - y :
-		x >= (result_t)0 ?
-			/* x positive, y negative: can overflow */
-			(x > ((result_t)INT_MAX) + y ? (result_t)INT_MAX : x - y) :
-			/* x negative, y positive: can underflow */
-			(x < ((result_t)INT_MIN) + y ? (result_t)INT_MIN : x - y);
-})
+//COMPLEX_2(int, sub_sat, int, x, int, y, {
+//	return ((x ^ y) >= (result_t)0) ?
+//		/* same sign: no over-/underflow */
+//		x - y :
+//		x >= (result_t)0 ?
+//			/* x positive, y negative: can overflow */
+//			(x > ((result_t)INT_MAX) + y ? (result_t)INT_MAX : x - y) :
+//			/* x negative, y positive: can underflow */
+//			(x < ((result_t)INT_MIN) + y ? (result_t)INT_MIN : x - y);
+//})
+SIMPLE_2(int, sub_sat, int, x, int, y, vc4cl_saturated_sub(x, y))
 
 SIMPLE_2(short, upsample, char, hi, uchar, lo, vc4cl_bitcast_short((vc4cl_sign_extend(hi) << 8) | vc4cl_bitcast_int(vc4cl_zero_extend(lo))))
 SIMPLE_2(ushort, upsample, uchar, hi, uchar, lo, vc4cl_bitcast_ushort((vc4cl_zero_extend(hi) << 8) | vc4cl_zero_extend(lo)))

@@ -25,8 +25,6 @@
 			vc4cl_dma_copy(dst, src, num_elements); \
 			vc4cl_mutex_unlock(); \
 		}
-//		for(size_t i = 0; i < num_elements; ++i) \
-//			dst[i] = src[i];
 
 #define ASYNC_COPY(type) \
 		INLINE event_t async_work_group_copy(__local type * dst, const __global type * src, size_t num_elements, event_t event) OVERLOADABLE \
@@ -165,21 +163,27 @@
 #define PREFETCH(type) \
 		INLINE void prefetch(const __global type * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		} \
 		INLINE void prefetch(const __global type##2 * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		} \
 		INLINE void prefetch(const __global type##3 * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		} \
 		INLINE void prefetch(const __global type##4 * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		} \
 		INLINE void prefetch(const __global type##8 * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		} \
 		INLINE void prefetch(const __global type##16 * ptr, size_t num_entries) OVERLOADABLE \
 		{ \
+			vc4cl_prefetch(ptr, num_entries); \
 		}
 
 /*

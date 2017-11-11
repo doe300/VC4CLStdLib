@@ -49,6 +49,55 @@ OVERLOAD_3_SCALAR(uint, vc4cl_mul24, uint, x, uint, y, uchar, sign)
 OVERLOAD_3_SCALAR(int, vc4cl_mul24, int, x, int, y, uchar, sign)
 
 /*
+ * Pack/unpack modes
+ */
+//TODO ALU needs to consume float for this to work
+//unpacks half to float (UNPACK 1: 16a -> 32)
+//OVERLOAD_1(float, vc4cl_unpack_half, half, val)
+//sign-extends short to int (UNPACK 1: 16a -> 32)
+OVERLOAD_1(int, vc4cl_unpack_sext, short, val)
+//unpacks first byte [0, 1] to float (UNPACK 4: 8a -> 32)
+OVERLOAD_1(float, vc4cl_unpack_color_byte0, uchar, val)
+//unpacks second byte [0, 1] to float (UNPACK 5: 8b -> 32)
+OVERLOAD_1(float, vc4cl_unpack_color_byte1, uchar, val)
+//unpacks third byte [0, 1] to float (UNPACK 6: 8c -> 32)
+OVERLOAD_1(float, vc4cl_unpack_color_byte2, uchar, val)
+//unpacks fourth byte [0, 1] to float (UNPACK 7: 8d -> 32)
+OVERLOAD_1(float, vc4cl_unpack_color_byte3, uchar, val)
+//zero-extend first byte to uint (UNPACK 4: 8a -> 32)
+OVERLOAD_1(uint, vc4cl_unpack_byte0, uchar, val)
+//zero-extend second byte to uint (UNPACK 5: 8b -> 32)
+OVERLOAD_1(uint, vc4cl_unpack_byte1, uchar, val)
+//zero-extend third byte to uint (UNPACK 6: 8c -> 32)
+OVERLOAD_1(uint, vc4cl_unpack_byte2, uchar, val)
+//zero-extend fourth byte to uint (UNPACK 7: 8d -> 32)
+OVERLOAD_1(uint, vc4cl_unpack_byte3, uchar, val)
+
+//TODO ALU needs to consume float for this to work
+//packs float into half (PACK 1: 32 -> 16a)
+//OVERLOAD_1(half, vc4cl_pack_half, float, val)
+//converts to unsigned 16-bit integer, truncates the result (PACK 1: 32 -> 16a)
+OVERLOAD_1(ushort, vc4cl_pack_truncate, int, val)
+OVERLOAD_1(ushort, vc4cl_pack_truncate, uint, val)
+//replicates the LSB into all four bytes (PACK 3: 32 -> 8888)
+OVERLOAD_1(uint, vc4cl_replicate_lsb, char, val)
+OVERLOAD_1(uint, vc4cl_replicate_lsb, uchar, val)
+OVERLOAD_1(uint, vc4cl_replicate_lsb, uint, val)
+//takes the LSB and writes it into LSB (PACK 4: 32 -> 8a)
+OVERLOAD_1(uchar, vc4c_pack_lsb, char, val)
+OVERLOAD_1(uchar, vc4c_pack_lsb, uchar, val)
+OVERLOAD_1(uchar, vc4c_pack_lsb, uint, val)
+//calculates addition, but saturates the result afterwards (given the overflow/carry flag of addition) (uses PACK 8: 32 -> 32)
+OVERLOAD_2(int, vc4cl_saturated_add, int, x, int, y)
+//calculates subtraction, but saturates the result afterwards (given the overflow/carry flag of substraction) (uses PACK 8: 32 -> 32)
+OVERLOAD_2(int, vc4cl_saturated_sub, int, x, int, y)
+//converts to signed 16-bit integer, saturates the result (PACK 9: 32 -> 16a)
+OVERLOAD_1(short, vc4cl_saturate_short, int, val)
+//saturates to unsigned byte (PACK 12:  32 -> 8a)
+OVERLOAD_1(uchar, vc4cl_saturate_lsb, uint, val)
+
+
+/*
  * SFU calls
  */
 OVERLOAD_1(float, vc4cl_sfu_recip, float, val)
@@ -92,14 +141,27 @@ OVERLOAD_3_SCALAR(int, vc4cl_dma_copy, __local short, *dest, const __global shor
 OVERLOAD_3_SCALAR(int, vc4cl_dma_copy, __local uint, *dest, const __global uint, *src, size_t, num_elements)
 OVERLOAD_3_SCALAR(int, vc4cl_dma_copy, __local int, *dest, const __global int, *src, size_t, num_elements)
 OVERLOAD_3_SCALAR(int, vc4cl_dma_copy, __local float, *dest, const __global float, *src, size_t, num_elements)
-//load 32-bit scalar value via TMU
+//load into VPM without locking the mutex
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global uchar, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global char, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global ushort, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global short, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global uint, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global int, *ptr, size_t, num_elements)
+OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global float, *ptr, size_t, num_elements)
+//load 32-bit scalar value(s) via TMU
 int vc4cl_tmu_read(__global int* ptr) OVERLOADABLE;
 int vc4cl_tmu_read(__local int* ptr) OVERLOADABLE;
-uint vc4cl_tmu_read(__global uint* ptr) OVERLOADABLE;
-uint vc4cl_tmu_read(__local uint* ptr) OVERLOADABLE;
-float vc4cl_tmu_read(__global float* ptr) OVERLOADABLE;
-float vc4cl_tmu_read(__local float* ptr) OVERLOADABLE;
-//XXX vector-variants? need to take up to 16 single addresses
+int2 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1) OVERLOADABLE;
+int2 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1) OVERLOADABLE;
+int3 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2) OVERLOADABLE;
+int3 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2) OVERLOADABLE;
+int4 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3) OVERLOADABLE;
+int4 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3) OVERLOADABLE;
+int8 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3, __global int* ptr4, __global int* ptr5, __global int* ptr6, __global int* ptr7) OVERLOADABLE;
+int8 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7) OVERLOADABLE;
+int16 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3, __global int* ptr4, __global int* ptr5, __global int* ptr6, __global int* ptr7, __global int* ptr8, __global int* ptr9, __global int* ptr10, __global int* ptr11, __global int* ptr12, __global int* ptr13, __global int* ptr14, __global int* ptr15) OVERLOADABLE;
+int16 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7, __local int* ptr8, __local int* ptr9, __local int* ptr10, __local int* ptr11, __local int* ptr12, __local int* ptr13, __local int* ptr14, __local int* ptr15) OVERLOADABLE;
 
 /*
  * Work-item functions
@@ -119,6 +181,7 @@ PURE uint vc4cl_global_id(uint dim);
  * In CLang, read_only and write_only image-types are separate types.
  * Also in CLang, OpenCL image-types are built-in opaque types
  */
+#ifdef __IMAGE_SUPPORT__
 /*
  * Texture Config Parameter 0
  * Broadcom specification, table 15
@@ -165,19 +228,28 @@ OVERLOAD_ALL_IMAGE_TYPES(CONST uint, vc4cl_image_access_setup)
  * 30 - 31 | 2 bits  | value 3 for child image offsets
  */
 OVERLOAD_ALL_IMAGE_TYPES(CONST uint, vc4cl_image_extended_setup)
+/*
+ * To apply a sampler to an image, we need to override the image-access setup UNIFORM before a read with the magnification/minification filters and wrap modes to use
+ */
+OVERLOAD_ALL_IMAGE_TYPES_1(void, vc4cl_set_image_access_setup, uint, val)
 CONST uint vc4cl_sampler_get_normalized_coords(sampler_t sampler);
 CONST uint vc4cl_sampler_get_addressing_mode(sampler_t sampler);
 CONST uint vc4cl_sampler_get_filter_mode(sampler_t sampler);
 /*
  * Image read functions
  *
- * The parameter need to be floating-values in the range [0, 1] and are scaled to the width/height of the image
- * The returned data is not necessarily uint32, but some 32 bits, their meaning needs to be read from the configuration
+ * The coordinates need to be floating-values in the range [0, 1] and are scaled to the width/height of the image.
+ * The returned data is not necessarily <4 x int32>, but up to 4 components with up to 32 bits each, loaded according to the byte-sizes and number of components specified in the channel_type_size and channel_order_size.
+ *
+ * So, this functions return the data in the native format (as stored in the image-buffer), but correctly distributed across the 4 components.
  */
-uint vc4cl_image_read(read_only image1d_t image, float xCoord) OVERLOADABLE;
-uint vc4cl_image_read(read_only image2d_t image, float xCoord, float yCoord) OVERLOADABLE;
-//XXX like the scalar reads, vector-versions are supported, but not useful so far, since OpenCL cannot read several pixels at once
-
+int4 vc4cl_image_read(read_only image1d_t image, float coords, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+int4 vc4cl_image_read(read_only image1d_buffer_t image, float coords, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+int4 vc4cl_image_read(read_only image1d_array_t image, float coords, int imageIndex, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+int4 vc4cl_image_read(read_only image2d_t image, float2 coords, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+int4 vc4cl_image_read(read_only image2d_array_t image, float2 coords, int imageIndex, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+int4 vc4cl_image_read(read_only image3d_t image, float4 coords, uint channel_type_size, uint channel_order_size) OVERLOADABLE;
+#endif
 
 /*
  * Type conversions

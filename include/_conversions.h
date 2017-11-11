@@ -670,9 +670,6 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
 		return ((union { srcType src; dstType dst; }) { .src = val}).dst; \
 	}
 
-//TODO does CLang generate correct code?
-
-
 AS_TYPE(uchar, uchar)
 AS_TYPE(uchar, char)
 AS_TYPE(uchar2, uchar2)

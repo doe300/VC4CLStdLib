@@ -70,6 +70,14 @@
 	FUNC_2(ret, func, argType0##2, argName0, argType1##2, argName1); \
 	FUNC_2(ret, func, argType0, argName0, argType1, argName1);
 
+#define OVERLOAD_2_SCALAR_RETURN_SCALAR(ret, func, argType0, argName0, argType1, argName1) \
+	FUNC_2(ret, func, argType0##16, argName0, argType1, argName1); \
+	FUNC_2(ret, func, argType0##8, argName0, argType1, argName1); \
+	FUNC_2(ret, func, argType0##4, argName0, argType1, argName1); \
+	FUNC_2(ret, func, argType0##3, argName0, argType1, argName1); \
+	FUNC_2(ret, func, argType0##2, argName0, argType1, argName1); \
+	FUNC_2(ret, func, argType0, argName0, argType1, argName1);
+
 #define FUNC_3(ret, func, argType0, argName0, argType1, argName1, argType2, argName2) ret func(argType0 argName0, argType1 argName1, argType2 argName2) OVERLOADABLE
 #define OVERLOAD_3(ret, func, argType0, argName0, argType1, argName1, argType2, argName2) \
 	FUNC_3(ret##16, func, argType0##16, argName0, argType1##16, argName1, argType2##16, argName2); \
