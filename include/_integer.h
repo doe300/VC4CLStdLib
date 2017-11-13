@@ -63,12 +63,22 @@ SIMPLE_2(uint, add_sat, uint, x, uint, y, x > ((result_t)UINT_MAX) - y ? UINT_MA
 SIMPLE_2(int, add_sat, int, x, int, y, vc4cl_saturated_add(x, y))
 
 //"Returns (x + y) >> 1.  The intermediate sum does not modulo overflow."
+SIMPLE_2(uchar, hadd, uchar, x, uchar, y, vc4cl_pack_lsb((vc4cl_extend(x) + vc4cl_extend(y)) >> 1))
+SIMPLE_2(char, hadd, char, x, char, y, vc4cl_bitcast_char(vc4cl_asr(vc4cl_extend(x) + vc4cl_extend(y), 1)))
+SIMPLE_2(ushort, hadd, ushort, x, ushort, y, vc4cl_bitcast_ushort((vc4cl_extend(x) + vc4cl_extend(y)) >> 1))
+SIMPLE_2(short, hadd, short, x, short, y, vc4cl_bitcast_short(vc4cl_asr(vc4cl_extend(x) + vc4cl_extend(y), 1)))
 //based on pocl (pocl/lib/kernel/hadd.cl)
-SIMPLE_INTEGER_2(hadd, x, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
+SIMPLE_2(uint, hadd, uint, x, uint, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
+SIMPLE_2(int, hadd, int, x, int, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
 
 //"Returns (x + y + 1) >> 1.  The intermediate sum does not modulo overflow."
+SIMPLE_2(uchar, rhadd, uchar, x, uchar, y, vc4cl_pack_lsb((vc4cl_extend(x) + vc4cl_extend(y) + (uint)1) >> 1))
+SIMPLE_2(char, rhadd, char, x, char, y, vc4cl_bitcast_char(vc4cl_asr(vc4cl_extend(x) + vc4cl_extend(y) + (int)1, 1)))
+SIMPLE_2(ushort, rhadd, ushort, x, ushort, y, vc4cl_bitcast_ushort((vc4cl_extend(x) + vc4cl_extend(y) + (uint)1) >> 1))
+SIMPLE_2(short, rhadd, short, x, short, y, vc4cl_bitcast_short(vc4cl_asr(vc4cl_extend(x) + vc4cl_extend(y) + (int)1, 1)))
 //based on pocl (pocl/lib/kernel/rhadd.cl)
-SIMPLE_INTEGER_2(rhadd, x, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
+SIMPLE_2(uint, rhadd, uint, x, uint, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
+SIMPLE_2(int, rhadd, int, x, int, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
 
 SIMPLE_INTEGER_3(clamp, val, minval, maxval, min(max(val, minval), maxval))
 SIMPLE_3_TWO_SCALAR(uchar, clamp, uchar, val, uchar, minval, uchar, maxval, min(max(val, minval), maxval))
@@ -132,13 +142,11 @@ SIMPLE_2_SCALAR(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 
 SIMPLE_INTEGER_2(mul_hi, a, b, vc4cl_mul_hi(a, b))
 
-SIMPLE_2(uchar, rotate, uchar, x, uchar, y, vc4c_pack_lsb(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
-//XXX has the correct result (in the LSB), but the other bytes still have the replicated value, not the sign-extension if the LSB
-SIMPLE_2(char, rotate, char, x, char, y, vc4cl_bitcast_char(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_sign_extend(y))))
-//TODO rotate with types < int is wrong!! Since the rotation is over all 32 bits, not just "used"
-//-> replicate (unpack) rotate, mask out rest (pack?)
-SIMPLE_2(ushort, rotate, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_ror(vc4cl_zero_extend(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
-SIMPLE_2(short, rotate, short, x, short, y, vc4cl_bitcast_short(vc4cl_ror(vc4cl_sign_extend(x), -vc4cl_sign_extend(y))))
+//Since the rotation is over all 32-bits, for smaller types we need to replicate the value, rotate it and truncate/sign extend the result afterwards
+SIMPLE_2(uchar, rotate, uchar, x, uchar, y, vc4cl_pack_lsb(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
+SIMPLE_2(char, rotate, char, x, char, y, vc4cl_bitcast_char(vc4cl_extend(vc4cl_bitcast_char(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_sign_extend(y))))))
+SIMPLE_2(ushort, rotate, ushort, x, ushort, y, vc4cl_pack_truncate(vc4cl_ror(vc4cl_zero_extend(x) | (vc4cl_zero_extend(x) << 16), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))
+SIMPLE_2(short, rotate, short, x, short, y, vc4cl_bitcast_short(vc4cl_extend(vc4cl_bitcast_short(vc4cl_ror((vc4cl_sign_extend(x) & (int) 0xFFFF) | (vc4cl_sign_extend(x) << 16), -vc4cl_sign_extend(y))))))
 SIMPLE_2(uint, rotate, uint, x, uint, y, vc4cl_bitcast_uint(vc4cl_ror(x, -vc4cl_bitcast_int(y))))
 SIMPLE_2(int, rotate, int, x, int, y, vc4cl_bitcast_int(vc4cl_ror(x, -y)))
 
