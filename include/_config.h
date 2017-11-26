@@ -50,9 +50,15 @@
 #ifndef cl_khr_local_int32_extended_atomics
 #define cl_khr_local_int32_extended_atomics
 #endif
+#ifndef cl_khr_byte_addressable_store
+#define cl_khr_byte_addressable_store
+#endif
 #ifdef __IMAGE_SUPPORT__
 #ifndef cl_khr_3d_image_writes
 #define cl_khr_3d_image_writes
+#endif
+#ifndef cl_intel_packed_yuv
+#define cl_intel_packed_yuv
 #endif
 #else
 #undef cl_khr_3d_image_writes
