@@ -12,3 +12,6 @@ CTestTestfile.cmake
 .cproject
 .project
 .settings
+
+#Other
+include/VC4CLStdLib.h.pch
