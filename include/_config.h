@@ -63,6 +63,9 @@
 #else
 #undef cl_khr_3d_image_writes
 #endif
+#ifndef cl_khr_initialize_memory
+#define cl_khr_initialize_memory
+#endif
 
 //unsupported extensions or optional core features
 #undef cl_khr_fp16
@@ -79,7 +82,6 @@
 #undef cl_khr_dx9_media_sharing
 #undef cl_khr_d3d11_sharing
 #undef cl_khr_image2d_from_buffer
-#undef cl_khr_initialize_memory
 #undef cl_khr_terminate_context
 #undef cl_khr_egl_image
 #undef cl_khr_egl_event
