@@ -94,27 +94,27 @@
 		}
 
 #define CONVERT_INTEGER_TO_FLOAT(srcType, saturation, rounding) \
-		INLINE float convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
+		INLINE float convert_float##saturation##rounding(srcType val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, /* scalar */, saturation, val)); \
 		} \
-		INLINE float##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+		INLINE float##2 convert_float2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 2, saturation, val)); \
 		} \
-		INLINE float##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+		INLINE float##3 convert_float3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 3, saturation, val)); \
 		} \
-		INLINE float##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+		INLINE float##4 convert_float4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 4, saturation, val)); \
 		} \
-		INLINE float##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+		INLINE float##8 convert_float8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 8, saturation, val)); \
 		} \
-		INLINE float##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+		INLINE float##16 convert_float16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
 		{ \
 			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 16, saturation, val)); \
 		}

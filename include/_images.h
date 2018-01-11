@@ -470,7 +470,7 @@ INLINE float4 read_imagef(read_only image1d_array_t image, sampler_t sampler, fl
 
 INLINE float4 read_imagef(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
 {
-	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	float2 coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
 	return read_imagef(image, sampler, coords);
 }
 
@@ -486,7 +486,7 @@ INLINE int4 read_imagei(read_only image1d_array_t image, sampler_t sampler, floa
 
 INLINE int4 read_imagei(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
 {
-	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	float2 coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
 	return read_imagei(image, sampler, coords);
 }
 
@@ -502,7 +502,7 @@ INLINE uint4 read_imageui(read_only image1d_array_t image, sampler_t sampler, fl
 
 INLINE uint4 read_imageui(read_only image1d_array_t image, sampler_t sampler, int2 coord) OVERLOADABLE
 {
-	float coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
+	float2 coords = vc4cl_normalize_coordinates(coord, get_image_width(image));
 	return read_imageui(image, sampler, coords);
 }
 
@@ -566,7 +566,7 @@ INLINE float4 read_imagef(read_only image2d_array_t image, sampler_t sampler, fl
 
 INLINE float4 read_imagef(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
 {
-	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_array_size(image), 0));
 	return read_imagef(image, sampler, coords);
 }
 
@@ -582,7 +582,7 @@ INLINE int4 read_imagei(read_only image2d_array_t image, sampler_t sampler, floa
 
 INLINE int4 read_imagei(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
 {
-	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_array_size(image), 0));
 	return read_imagei(image, sampler, coords);
 }
 
@@ -598,7 +598,7 @@ INLINE uint4 read_imageui(read_only image2d_array_t image, sampler_t sampler, fl
 
 INLINE uint4 read_imageui(read_only image2d_array_t image, sampler_t sampler, int4 coord) OVERLOADABLE
 {
-	float2 coords = vc4cl_normalize_coordinates(coord, (int2)(get_image_width(image), get_image_height(image)));
+	float4 coords = vc4cl_normalize_coordinates(coord, (int4)(get_image_width(image), get_image_height(image), get_image_array_size(image), 0));
 	return read_imageui(image, sampler, coords);
 }
 
