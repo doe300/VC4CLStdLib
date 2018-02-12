@@ -31,8 +31,8 @@ INLINE void barrier(cl_mem_fence_flags flags) OVERLOADABLE
 	 */
 
 	//1. calculate local index and size
-	uchar localSize = vc4cl_local_size(0) * vc4cl_local_size(1) * vc4cl_local_size(2);
-	uchar localIndex = vc4cl_local_id(2) * vc4cl_local_size(1) * vc4cl_local_size(0) + vc4cl_local_id(1) * vc4cl_local_size(0) + vc4cl_local_id(0);
+	uchar localSize = mul24(mul24(vc4cl_local_size(0), vc4cl_local_size(1)), vc4cl_local_size(2));
+	uchar localIndex = mul24(mul24(vc4cl_local_id(2), vc4cl_local_size(1)), vc4cl_local_size(0)) + mul24(vc4cl_local_id(1), vc4cl_local_size(0)) + vc4cl_local_id(0);
 
 	if(localIndex != 0)
 	{

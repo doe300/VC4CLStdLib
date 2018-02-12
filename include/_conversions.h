@@ -663,7 +663,10 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtz)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtp)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
 
-
+/*
+ * A newer version of the opencl-c.h header defines all as_<type> as macros to __builtin_astype wich generates the same LLVM IR as this custom implementation
+ */
+/*
 #define AS_TYPE(dstType, srcType) \
 	INLINE dstType as_##dstType(srcType val) OVERLOADABLE CONST \
 	{ \
@@ -992,6 +995,6 @@ AS_TYPE(float8, float8)
 AS_TYPE(float16, uint16)
 AS_TYPE(float16, int16)
 AS_TYPE(float16, float16)
-
+*/
 #endif /* VC4CL_CONVERSIONS_H */
 
