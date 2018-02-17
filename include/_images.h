@@ -1005,8 +1005,6 @@ CONST int get_image_channel_order(write_only image3d_t image) OVERLOADABLE;
 CONST int get_image_channel_order(write_only image1d_array_t image) OVERLOADABLE;
 CONST int get_image_channel_order(write_only image2d_array_t image) OVERLOADABLE;
 
-
-//TODO how to handle? Need extra parameter??
 CONST size_t get_image_array_size(read_only image1d_array_t image_array) OVERLOADABLE;
 CONST size_t get_image_array_size(read_only image2d_array_t image_array) OVERLOADABLE;
 CONST size_t get_image_array_size(write_only image1d_array_t image_array) OVERLOADABLE;

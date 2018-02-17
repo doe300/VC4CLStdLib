@@ -62,6 +62,7 @@
 #endif
 #else
 #undef cl_khr_3d_image_writes
+#undef cl_intel_packed_yuv
 #endif
 #ifndef cl_khr_initialize_memory
 #define cl_khr_initialize_memory
