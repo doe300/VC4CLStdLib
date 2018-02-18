@@ -57,6 +57,7 @@ INLINE size_t get_global_offset(uint dim) OVERLOADABLE CONST
 /*
  * Returns the work-­items 1­‐dimensional local ID.
  */
+size_t get_local_linear_id(void) CONST; // prototype
 INLINE size_t get_local_linear_id() OVERLOADABLE CONST
 {
 	return vc4cl_mul24(vc4cl_mul24(vc4cl_local_id(2), vc4cl_local_size(1), VC4CL_UNSIGNED), vc4cl_bitcast_uint(vc4cl_local_size(0)), VC4CL_UNSIGNED) + vc4cl_mul24(vc4cl_local_id(1), vc4cl_local_size(0), VC4CL_UNSIGNED) + vc4cl_local_id(0);
