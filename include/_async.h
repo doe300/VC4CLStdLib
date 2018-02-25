@@ -159,7 +159,6 @@
 			return event; \
 		}
 
-//Since it doesn't affect the functional behavior, the implementation is a no-op
 #define PREFETCH(type) \
 		INLINE void prefetch(const __global type * ptr, size_t num_entries) OVERLOADABLE \
 		{ \

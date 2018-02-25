@@ -120,27 +120,27 @@
 		}
 
 #define CONVERT_FLOAT_TO_FLOAT(saturation, rounding) \
-		INLINE float convert_##destType##saturation##rounding(float val) OVERLOADABLE CONST \
+		INLINE float convert_float##saturation##rounding(float val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		} \
-		INLINE float##2 convert_##destType##2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
+		INLINE float##2 convert_float2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		} \
-		INLINE float##3 convert_##destType##3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
+		INLINE float##3 convert_float3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		} \
-		INLINE float##4 convert_##destType##4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
+		INLINE float##4 convert_float4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		} \
-		INLINE float##8 convert_##destType##8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
+		INLINE float##8 convert_float8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		} \
-		INLINE float##16 convert_##destType##16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
+		INLINE float##16 convert_float16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
 		{ \
 			return ROUND_TO_INTEGER(rounding, val); \
 		}

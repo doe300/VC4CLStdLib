@@ -218,6 +218,9 @@ VECTOR_STORE(uint)
 VECTOR_STORE(int)
 VECTOR_STORE(float)
 
+//TODO vload(a)_half, vload(a)_halfn (+rounding) (load half and return converted to float, possible with unpack-modes)
+//TODO vstore(a)_half, vstore(a)_halfn (+rounding) (store float as half in memory, possible with pack modes)
+
 /*
  * TODO shuffle2, but LLVM fails, since the indices for the __builtin intrinsic need to be constant integers!
 VECTOR_SHUFFLE_2(uchar, uchar)
