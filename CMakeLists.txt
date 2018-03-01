@@ -5,7 +5,8 @@ cmake_minimum_required (VERSION 3.1)
 ####
 # Option whether to create deb package
 option(BUILD_DEB_PACKAGE "Enables creating .deb package" ON)
-
+# Option whether to compile for raspberry-pi (default: ON, for the compatibility)
+option(CROSS_COMPILE "Cross compile for Raspbian" ON)
 
 project(VC4CLStdLib VERSION 0.4)
 
@@ -36,7 +37,11 @@ if (BUILD_DEB_PACKAGE)
 	set(CPACK_PACKAGE_NAME "vc4cl-stdlib")
 	string(TIMESTAMP BUILD_TIMESTAMP "%Y-%m-%d")
 	set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}-${BUILD_TIMESTAMP}")
-	set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+        if (CROSS_COMPILE)
+	  set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+        else()
+          set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+        endif()
 	set(CPACK_PACKAGE_VENDOR "doe300")
 	set(CPACK_PACKAGE_CONTACT "doe300@web.de")
 	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenCL C headers for the VC4CL implementation (rasberrypi only)")
