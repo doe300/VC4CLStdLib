@@ -313,6 +313,7 @@ COMPLEX_1(float, erf, float, x,
 COMPLEX_1(float, exp, float, val,
 {
 	//TODO bad accurracy for negative exponents < -22
+	//TODO accuracy generally too bad
 	uint n = 16;
 	result_t r = val / (result_t)(1 << n);
 	result_t E = ((1680.0f + 840.0f * r + 180.0f * r * r + 20.0f * r * r * r + r * r * r * r) / (1680.0f - 840.0f * r + 180.0f * r * r - 20.0f * r * r * r + r * r * r * r)) - 1;
@@ -384,7 +385,7 @@ COMPLEX_1(float, floor, float, val,
 	// |val| < 2^23 fits into integer
 	result_t truncated = vc4cl_itof(vc4cl_ftoi(val));
 	// if the truncation is greater than val (negative numbers), subtract 1 to round down
-	result_t floor_val = truncated + vc4cl_itof(truncated > val);
+	result_t floor_val = truncated - vc4cl_itof(truncated > val);
 	//deciding here which value to return saves us up to two jumps
 	return tooBig ? val : floor_val;
 })
@@ -464,6 +465,7 @@ COMPLEX_1(int, ilogb, float, x,
 
 //"Multiply x by 2 to the power k."
 //TODO rewrite, use bit-trickery: x * 2^k = Mx * 2^(Ex + k)
+//TODO is wrong for negative k! -> bit-trickery rewrite would be correct!?
 SIMPLE_2(float, ldexp, float, x, int, k, x * vc4cl_itof((arg1_t)(1) << k))
 SIMPLE_2_SCALAR(float, ldexp, float, x, int, k, x * (1 << k))
 
@@ -767,6 +769,7 @@ COMPLEX_1(float, rint, float, val,
 {
 	//" Round to nearest even integer. "
 	//round like round, but decides on nearest even for halfway cases
+	//TODO always round to nearest even (e.g. 0.4 to 2.0) or just for half-way cases?
 
 	//https://stackoverflow.com/questions/12279914/implement-ceil-in-c
 	//http://blog.frama-c.com/index.php?post/2013/05/02/nearbyintf1
@@ -1000,7 +1003,7 @@ COMPLEX_1(float, sqrt, float, val,
 
 	//TODO with 7 steps, this has an maximum error of ~0 for values > 0.5, but for |x| < 0.04 it exceeds the error of 4.7*10-7 from the OpenCL standard
 
-	return x;
+	return val == 0.0f ? (result_t)0.0f : x;
 })
 
 //TODO different algorithm?!

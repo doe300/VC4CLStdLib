@@ -22,6 +22,9 @@
 #ifndef CL_VERSION_2_1
 #define CL_VERSION_2_1 210
 #endif
+#ifndef CL_VERSION_2_2
+#define CL_VERSION_2_2 220
+#endif
 
 #undef __OPENCL_VERSION__
 #define __OPENCL_VERSION__ CL_VERSION_1_2
@@ -53,6 +56,10 @@
 #ifndef cl_khr_byte_addressable_store
 #define cl_khr_byte_addressable_store
 #endif
+#ifndef cl_khr_initialize_memory
+#define cl_khr_initialize_memory
+#endif
+
 #ifdef __IMAGE_SUPPORT__
 #ifndef cl_khr_3d_image_writes
 #define cl_khr_3d_image_writes
@@ -63,9 +70,6 @@
 #else
 #undef cl_khr_3d_image_writes
 #undef cl_intel_packed_yuv
-#endif
-#ifndef cl_khr_initialize_memory
-#define cl_khr_initialize_memory
 #endif
 
 //unsupported extensions or optional core features
