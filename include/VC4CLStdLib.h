@@ -30,6 +30,42 @@ extern "C"
 #include "_images.h"
 #include "_printf.h"
 
+#undef ALL_BITS_SET
+#undef OVERLOADABLE
+#undef CONST
+#undef PURE
+#undef INLINE
+#undef FUNC_1
+#undef OVERLOAD_1
+#undef OVERLOAD_1_RETURN_SCALAR
+#undef FUNC_2
+#undef OVERLOAD_2
+#undef OVERLOAD_2_SCALAR
+#undef OVERLOAD_2_RETURN_SCALAR
+#undef OVERLOAD_2_SCALAR_RETURN_SCALAR
+#undef FUNC_3
+#undef OVERLOAD_3
+#undef OVERLOAD_3_SCALAR
+#undef FUNC_4
+#undef FUNC_5
+#undef SIMPLE_1
+#undef SIMPLE_1_RETURN_SCALAR
+#undef SIMPLE_2
+#undef SIMPLE_2_RETURN_SCALAR
+#undef SIMPLE_2_SCALAR
+#undef SIMPLE_3
+#undef SIMPLE_3_SCALAR
+#undef SIMPLE_3_TWO_SCALAR
+#undef COMPLEX_1
+#undef COMPLEX_1_RETURN_SCALAR
+#undef COMPLEX_2
+#undef COMPLEX_3
+#undef OVERLOAD_ALL_IMAGE_TYPES
+#undef OVERLOAD_ALL_IMAGE_TYPES_1
+#undef OVERLOAD_ALL_IMAGE_TYPES_2
+#undef OVERLOAD_ALL_IMAGE_TYPES_3
+#undef OVERLOAD_ALL_IMAGE_TYPES_4
+
 #ifdef __cplusplus
 }
 #endif

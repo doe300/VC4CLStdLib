@@ -80,6 +80,8 @@
 #undef cl_khr_depth_images
 #undef cl_khr_gl_depth_images
 #undef cl_khr_gl_msaa_sharing
+#undef cl_amd_media_ops
+#undef cl_amd_media_ops2
 //unsupported host-only extensions (disable for safety)
 #undef cl_khr_gl_sharing
 #undef cl_khr_gl_event

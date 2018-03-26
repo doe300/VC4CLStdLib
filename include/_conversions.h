@@ -996,5 +996,36 @@ AS_TYPE(float16, uint16)
 AS_TYPE(float16, int16)
 AS_TYPE(float16, float16)
 */
+
+#undef uchar_MIN
+#undef uchar_MAX
+#undef char_MIN
+#undef char_MAX
+#undef ushort_MIN
+#undef ushort_MAX
+#undef short_MIN
+#undef short_MAX
+#undef uint_MIN
+#undef uint_MAX
+#undef int_MIN
+#undef int_MAX
+#undef float_MAX
+#undef float_MIN
+
+#undef _sat
+#undef _rte
+#undef _rtz
+#undef _rtp
+#undef _rtn
+#undef SATURATE
+#undef SATURATE_FLOAT
+#undef ROUND_TO_INTEGER
+#undef CONVERSION_WITH_SATURATION
+#undef CONVERSION_WITH_SATURATION_FLOAT
+#undef CONVERT_INTEGER
+#undef CONVERT_FLOAT_TO_INTEGER
+#undef CONVERT_INTEGER_TO_FLOAT
+#undef CONVERT_FLOAT_TO_FLOAT
+
 #endif /* VC4CL_CONVERSIONS_H */
 

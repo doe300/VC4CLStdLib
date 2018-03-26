@@ -205,5 +205,9 @@ SIMPLE_3(float, select, float, a, float, b, short, c, vc4cl_extend(vc4cl_msb_set
 SIMPLE_3(float, select, float, a, float, b, uint, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
 SIMPLE_3(float, select, float, a, float, b, int, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
 
+#undef COMPARISON_1
+#undef COMPARISON_2
+#undef FOR_ALL_ELEMENTS
+
 #endif /* VC4CL_RELATIONAL_H */
 

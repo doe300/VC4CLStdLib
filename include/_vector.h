@@ -242,5 +242,12 @@ VECTOR_SHUFFLE(float, uint)
 
 //shuffle2 is handled via intrinsifying the OpenCL function
 
+#undef VECTOR_LOAD
+#undef VECTOR_STORE
+#undef VECTOR_SHUFFLE_2_INTERNAL
+#undef VECTOR_SHUFFLE_2
+#undef VECTOR_SHUFFLE_INTERNAL
+#undef VECTOR_SHUFFLE
+
 #endif /* VC4CL_VECTOR_H */
 

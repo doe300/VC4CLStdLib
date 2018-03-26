@@ -172,5 +172,8 @@ SIMPLE_2(uint, mul24, uint, x, uint, y, vc4cl_mul24(x, y, VC4CL_UNSIGNED))
 SIMPLE_2(int, mul24, int, x, int, y, vc4cl_mul24(x, y, VC4CL_SIGNED))
 SIMPLE_INTEGER_3(mad24, a, b, c, mul24(a, b) + c)
 
+#undef SIMPLE_INTEGER_2
+#undef SIMPLE_INTEGER_3
+
 #endif /* VC4CL_INTEGER_H */
 
