@@ -98,7 +98,7 @@ COMPLEX_1(float, atan, float, val,
 	result_t approx = (1155 * r + 1190 * r * r * r + 231 * r * r * r * r * r) / (1155 + 1575 * r * r + 525 * r * r * r * r + 25 * r * r * r * r * r * r);
 
 	//calculate the result (2^n * approx)
-	return ((result_t)(2 << n)) * approx;
+	return ((result_t)(2 << (n - 1))) * approx;
 })
 
 //TODO wrong: https://en.wikipedia.org/wiki/Atan2
@@ -313,6 +313,7 @@ COMPLEX_1(float, erf, float, x,
 COMPLEX_1(float, exp, float, val,
 {
 	//TODO bad accurracy for negative exponents < -22
+	// -> need to find a way to skip argument reduction for negative exponents
 	//TODO accuracy generally too bad
 	uint n = 16;
 	result_t r = val / (result_t)(1 << n);

@@ -8,6 +8,10 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 
+#CPack
+/CPackConfig.cmake
+/CPackSourceConfig.cmake
+
 #Eclipse
 .cproject
 .project
@@ -15,3 +19,4 @@ CTestTestfile.cmake
 
 #Other
 include/VC4CLStdLib.h.pch
+include/VC4CLStdLib.bc

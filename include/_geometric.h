@@ -66,7 +66,7 @@ SIMPLE_1_RETURN_SCALAR(float, fast_length, float, p, half_sqrt(dot(p, p)))
 
 SIMPLE_2_RETURN_SCALAR(float, fast_distance, float, p0, float, p1, fast_length(p0 - p1))
 
-SIMPLE_1(float, fast_normalize, float, p, p * half_sqrt(dot(p, p)))
+SIMPLE_1(float, fast_normalize, float, p, p * half_rsqrt(dot(p, p)))
 
 #endif /* VC4CL_GEOMETRY_H */
 
