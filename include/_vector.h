@@ -210,6 +210,13 @@ VECTOR_LOAD(uint)
 VECTOR_LOAD(int)
 VECTOR_LOAD(float)
 
+// Add some compatilibity symbol.
+// See https://github.com/doe300/VC4CL/issues/31#issuecomment-393132343
+float4 _Z6vload4jPKU3AS1f(size_t offset, const __global float * ptr)
+{
+	return vload4(offset, ptr);
+}
+
 VECTOR_STORE(uchar)
 VECTOR_STORE(char)
 VECTOR_STORE(ushort)
