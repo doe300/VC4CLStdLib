@@ -16,6 +16,7 @@
  */
 
 SIMPLE_3(float, clamp, float, x, float, minval, float, maxval, fmin(fmax(x, minval), maxval))
+//TODO version with limits as scalar
 
 SIMPLE_1(float, degrees, float, radians, (180 / M_PI_F) * radians)
 

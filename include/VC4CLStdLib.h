@@ -29,6 +29,7 @@ extern "C"
 #include "_atomics.h"
 #include "_images.h"
 #include "_printf.h"
+#include "_spir_mangling.h"
 
 #undef ALL_BITS_SET
 #undef OVERLOADABLE
