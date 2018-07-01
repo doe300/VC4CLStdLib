@@ -59,6 +59,13 @@ SIMPLE_1_RETURN_SCALAR(float, length, float, p, sqrt(dot(p, p)))
 // This is calculated as length(p0 - p1).
 SIMPLE_2_RETURN_SCALAR(float, distance, float, p0, float, p1, length(p0 - p1))
 
+/**
+ * Expected behavior:
+ *
+ * normalize(v) = v for all elements in v = 0
+ * normalize(v) = vector of NaNs for all elements in v = NaN
+ * TODO special case for Inf elements
+ */
 SIMPLE_1(float, normalize, float, p, p / length(p))
 
 

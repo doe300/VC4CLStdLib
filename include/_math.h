@@ -10,6 +10,8 @@
 #include "./_common.h"
 #include "_intrinsics.h"
 
+//TODO test-cases for all the known Edge Case Behavior
+
 /*
  * Remove some macros for more efficient versions
  */
@@ -55,27 +57,69 @@ INLINE int factorial(int n) CONST
 	return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
 }
 
+/**
+ * Expected behavior:
+ *
+ * acos(1) = +-0
+ * acos(x) = NaN for |x| > 1
+ */
 SIMPLE_1(float, acos, float, val, M_PI_2_F - asin(val))
 
+/**
+ * Expected behavior:
+ *
+ * acosh(1) = +0
+ * acosh(x) = NaN for x < 1
+ * acosh(+Inf) = +Inf
+ */
 //https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions#Series_expansions
 //or: https://en.wikipedia.org/wiki/Hyperbolic_function#Inverse_functions_as_logarithms
 //XXX optimize?!
 SIMPLE_1(float, acosh, float, val, log(val + sqrt(val * val + 1)))
 
+/**
+ * Expected behavior:
+ *
+ * acospi(1) = +-0
+ * acospi(x) = NaN for |x| > 1
+ */
 SIMPLE_1(float, acospi, float, val, acos(val) * M_1_PI_F)
 
+/**
+ * Expected behavior:
+ *
+ * asin(+-0) = +-0
+ * asin(x) = NaN for |x| > 1
+ */
 SIMPLE_1(float, asin, float, val, atan(val * rsqrt(1 - val * val)))
 
+/**
+ * Expected behavior:
+ *
+ * asinh(+-0) = +-0
+ * asinh(+-Inf) = +-Inf
+ */
 //XXX optimize?!
 SIMPLE_1(float, asinh, float, val, log(val + sqrt(val * val - 1)))
 
+/**
+ * Expected behavior:
+ *
+ * asinpi(+-0) = +-0
+ * asinpi(x) = NaN for |x| > 1
+ */
 SIMPLE_1(float, asinpi, float, val, asin(val) * M_1_PI_F)
 
 //https://stackoverflow.com/questions/23047978/how-is-arctan-implemented
 //https://en.wikipedia.org/wiki/Taylor_series#Approximation_and_convergence (too inaccurate!)
 //http://www2.mae.ufl.edu/~uhk/ARCTAN-APPROX-PAPER.pdf (atan(x) = 1/x * F(1/x))
 //http://www.jjj.de/fxt/fxtbook.pdf
-/*
+/**
+ * Expected behavior:
+ *
+ * atan(+-0) = +-0
+ * atan(+-Inf) = +-pi/2
+ *
  * Argument reduction:
  * 1) atan(-x) = -atan(x)
  * 2) atan(1/x) = PI/2 - atan(x), x > 0
@@ -101,19 +145,75 @@ COMPLEX_1(float, atan, float, val,
 	return ((result_t)(2 << (n - 1))) * approx;
 })
 
+/**
+ * Expected behavior:
+ *
+ * atan2(+-0, -0) = +-pi
+ * atan2(+-0, +0) = +-0
+ * atan2(+-0, x) = +-pi for x < 0
+ * atan2(+-0, x) = +-0 for x > 0
+ * atan2(y, +-0) = -pi/2 for y < 0
+ * atan2(y, +-0) = pi/2 for y > 0
+ * atan2(+-y, -Inf) = +-pi for y > 0 and y != Inf
+ * atan2(+-y, +Inf) = +-0 for y > 0 and y != Inf
+ * atan2(+-Inf, x) = +-pi/2 for x != Inf
+ * atan2(+-Inf, -Inf) = +-3/4pi
+ * atan2(+-Inf, +Inf) = +-pi/4
+ */
 //TODO wrong: https://en.wikipedia.org/wiki/Atan2
 SIMPLE_2(float, atan2, float, x, float, y, atan(x / y))
 
+/**
+ * Expected behavior:
+ *
+ * atanh(+-0) = +-0
+ * atanh(+-1) = +-Inf
+ * atanh(x) = NaN for |x| > 1
+ */
 SIMPLE_1(float, atanh, float, val, ((result_t)0.5f) * log((1 + val) / (1 - val)))
 
+/**
+ * Expected behavior:
+ *
+ * atanpi(+-0) = +-0
+ * atanpi(+-Inf) = +-0.5
+ */
 SIMPLE_1(float, atanpi, float, val, atan(val) * M_1_PI_F)
 
+/**
+ * Expected behavior:
+ *
+ * atan2pi(+-0, -0) = +-1
+ * atan2pi(+-0, +0) = +-0
+ * atan2pi(+-0, x) = +-1 for x < 0
+ * atan2pi(+-0, x) = +-0 for x > 0
+ * atan2pi(y, +-0) = -0.5 for y < 0
+ * atan2pi(y, +-0) = 0.5 for y > 0
+ * atan2pi(+-y, -Inf) = +-1 for y > 0
+ * atan2pi(+-y, +Inf) = +-0 for y > 0
+ * atan2pi(+-Inf, x) = +-0.5
+ * atan2pi(+-Inf, -Inf) = +-0.75
+ * atan2pi(+-Inf, +Inf) = +-0.25
+ */
 SIMPLE_2(float, atan2pi, float, x, float, y, atan2(x, y) * M_1_PI_F)
 
+/**
+ * Expected behavior:
+ *
+ * cbrt(+-0) = +-0
+ * cbrt(+-Inf) = +-Inf
+ */
 //TODO different algorithm?
 //e.g. http://www.hackersdelight.org/hdcodetxt/acbrt.c.txt (acbrt1 with a few more Newton steps, but requires several floating-point divisions)
 SIMPLE_1(float, cbrt, float, val, pow(val, 1.0f/3.0f))
 
+/**
+ * Expected behavior:
+ *
+ * ceil(+-0) = +-0
+ * ceil(+-Inf) = +-Inf
+ * ceil(x) = -0 for -1 < x < 0
+ */
 COMPLEX_1(float, ceil, float, val,
 {
 	//"Round to integer toward + infinity. "
@@ -138,6 +238,12 @@ COMPLEX_1(float, ceil, float, val,
 // return tmp | sign
 SIMPLE_2(float, copysign, float, x, float, y, vc4cl_bitcast_float((vc4cl_bitcast_uint(y) & 0x80000000) | (vc4cl_bitcast_uint(x) & 0x7FFFFFFF)))
 
+/**
+ * Expected behavior:
+ *
+ * cos(+-0) = 1
+ * cos(+-Inf) = NaN for |x| > 1
+ */
 COMPLEX_1(float, cos, float, val,
 {
 	/*
@@ -206,6 +312,12 @@ COMPLEX_1(float, cos, float, val,
 	return tmp;
 })
 
+/**
+ * Expected behavior:
+ *
+ * cosh(+-0) = 1
+ * cosh(+-Inf) = +-Inf
+ */
 COMPLEX_1(float, cosh, float, val,
 {
 	/*
@@ -280,10 +392,29 @@ COMPLEX_1(float, cosh, float, val,
 	return C + 1;
 })
 
+/**
+ * Expected behavior:
+ *
+ * cospi(+-0) = 1
+ * cospi(x) = +0 for x = n + 0.5 and n is integer
+ * cospi(+-Inf) = NaN
+ */
 SIMPLE_1(float, cospi, float, val, cos(val * M_PI_F))
 
+/**
+ * Expected behavior:
+ *
+ * erfc(-Inf) = 2
+ * erfc(+Inf) = 0
+ */
 SIMPLE_1(float, erfc, float, x, 1 - erf(x))
 
+/**
+ * Expected behavior:
+ *
+ * erf(+-0) = +-0
+ * erf(+-Inf) = +-1
+ */
 COMPLEX_1(float, erf, float, x,
 {
 	/*
@@ -303,7 +434,13 @@ COMPLEX_1(float, erf, float, x,
 	return x < 0 ? r - 1 : 1 - r;
 })
 
-/*
+/**
+ * Expected behavior:
+ *
+ * exp(+-0) = 1
+ * exp(-Inf) = 0
+ * exp(+Inf) = +Inf
+ *
  * Matters computational (sections 32.2.2.2 and 32.2.3)
  *
  * Pade Approximation (16 steps): (1680 + 840x + 180 x^2 + 20 x^3 + x^4) / (1680 - 840 x + 180 x^2 - 20 x^3 + x^4)
@@ -360,21 +497,59 @@ COMPLEX_1(float, exp, float, val,
 //		return ldexp(expG, n);
 //	})
 
+/**
+ * Expected behavior:
+ *
+ * exp2(+-0) = 1
+ * exp2(-Inf) = 0
+ * exp2(+Inf) = +Inf
+ */
 //2^x = e^(x * ln(2))
 SIMPLE_1(float, exp2, float, x, exp(x * M_LN2_F))
 
+/**
+ * Expected behavior:
+ *
+ * exp10(+-0) = 1
+ * exp10(-Inf) = 0
+ * exp10(+Inf) = +Inf
+ */
 //10^x = e^(x * ln(10))
 SIMPLE_1(float, exp10, float, x, exp(x * M_LN10_F))
 
+/**
+ * Expected behavior:
+ *
+ * expm1(+-0) = +-0
+ * expm1(-Inf) = -1
+ * expm1(+Inf) = +Inf
+ */
 //e^x - 1.0
 SIMPLE_1(float, expm1, float, x, exp(x) - 1.0f)
 
+/**
+ * Expected behavior:
+ *
+ * fabs(+-0) = +0
+ * fabs(+-Inf) = +Inf
+ */
 SIMPLE_1(float, fabs, float, val, vc4cl_fmaxabs(val, 0.0f))
 
+/**
+ * Expected behavior:
+ *
+ * fdim(x, NaN) = NaN
+ * fdim(NaN, y) = NaN
+ */
 //"x-y if x>y, +0 if x is less than or equal to y."
-
 SIMPLE_2(float, fdim, float, x, float, y, x > y ? x - y : 0.0f)
 
+/**
+ * Expected behavior:
+ *
+ * floor(+-0) = +-0
+ * floor(+-Inf) = +-Inf
+ */
 COMPLEX_1(float, floor, float, val,
 {
 	//" Round to integer toward negative infinity. "
@@ -391,6 +566,15 @@ COMPLEX_1(float, floor, float, val,
 	return tooBig ? val : floor_val;
 })
 
+/**
+ * Expected behavior:
+ *
+ * fma(x, y, z) = xy + z
+ * fma(x, y, z) = NaN for x = 0 or y = 0
+ * fma(x, y, z)= NaN for x = Inf, y = Inf, z = Inf
+ * log2(x) = Nan for x < 0
+ * log2(+Inf) = +Inf
+ */
 //TODO not "infinitely precise product" and maybe not "correctly rounded"
 SIMPLE_3(float, fma, float, a, float, b, float, c, (a*b) + c)
 
@@ -400,10 +584,26 @@ SIMPLE_2_SCALAR(float, fmax, float, x, float, y, vc4cl_fmax(x, y))
 SIMPLE_2(float, fmin, float, x, float, y, vc4cl_fmin(x, y))
 SIMPLE_2_SCALAR(float, fmin, float, x, float, y, vc4cl_fmin(x, y))
 
+/**
+ * Expected behavior:
+ *
+ * fmod(+-0, y) = +-0 for y != 0
+ * fmod(x, y) = NaN for x = +-Inf or x = 0
+ * fmod(x, +-Inf) = x
+ */
 //"Modulus. Returns x � y * trunc(x/y)"
-
 SIMPLE_2(float, fmod, float, x, float, y, x - y * trunc(x / y))
 
+/**
+ * Expected behavior:
+ *
+ * 0 <= fract(x, iptr) < 1
+ * fract(+0, iptr) = +0, iptr = +0
+ * fract(-0, iptr) = -0, iptr = -0
+ * fract(+Inf, iptr) = +0, iptr = +Inf
+ * fract(-Inf, iptr) = -0, iptr = -Inf
+ * fract(NaN, iptr) = NaN, iptr = NaN
+ */
 COMPLEX_2(float, fract, float, val, __global float, *iptr,
 {
 	//TODO accuracy
@@ -431,6 +631,13 @@ COMPLEX_2(float, fract, float, val, __private float, *iptr,
 	return fmin(val - tmp, 0x1.fffffep-1f);
 })
 
+/**
+ * Expected behavior:
+ *
+ * frexp(+-0, exp) = +-0, exp = 0
+ * frexp(+-Inf, exp) = +-Inf, exp = 0
+ * frexp(NaN, exp) = NaN, exp = 0
+ */
 COMPLEX_2(float, frexp, float, x, __global int, *exp,
 {
 	//taken from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
@@ -453,6 +660,13 @@ COMPLEX_2(float, frexp, float, x, __local int, *exp,
 		return x == 0.0f ? (result_t)0.0f : ldexp(x, -e);
 	})
 
+/**
+ * Expected behavior:
+ *
+ * hypot(x, y) = hypot(y, x) = hypot(x, -y)
+ * hypot(x, 0+-) = fabs(x)
+ * hypot(+-Inf, y) = +Inf
+ */
 SIMPLE_2(float, hypot, float, x, float, y, sqrt(x * x + y * y))
 
 COMPLEX_1(int, ilogb, float, x,
@@ -470,6 +684,15 @@ COMPLEX_1(int, ilogb, float, x,
 SIMPLE_2(float, ldexp, float, x, int, k, x * vc4cl_itof((arg1_t)(1) << k))
 SIMPLE_2_SCALAR(float, ldexp, float, x, int, k, x * (1 << k))
 
+/**
+ * Expected behavior:
+ *
+ * lgamma(1) = 0
+ * lgamma(2) = 0
+ * lgamma(x) = +Inf for x <= 0 and x integer
+ * lgamma(-Inf) = +Inf
+ * lgamma(+Inf) = +Inf
+ */
 COMPLEX_1(float, lgamma, float, val,
 {
 	//"Returns the natural logarithm of the absolute value of the gamma function"
@@ -501,6 +724,11 @@ COMPLEX_1(float, lgamma, float, val,
 	return -tmp + log((2.5066282746310005f) * ser / x);
 })
 
+/**
+ * Expected behavior:
+ *
+ * lgamma_r(x, signp) -> signp = 0 for x < 0
+ */
 COMPLEX_2(float, lgamma_r, float, x, __global int, *signp,
 {
 	//TODO better way?
@@ -555,6 +783,14 @@ COMPLEX_2(float, lgamma_r, float, x, __private int, *signp,
 //        return characteristic + step1 + step2 + step3 + step4 + step5;
 //    })
 
+/**
+ * Expected behavior:
+ *
+ * log2(+-0) = -Inf
+ * log2(1) = 0
+ * log2(x) = Nan for x < 0
+ * log2(+Inf) = +Inf
+ */
 SIMPLE_1(float, log2, float, val, log(val) * (1.0f / M_LN2_F))
 
 /*
@@ -583,7 +819,14 @@ SIMPLE_1(float, log2, float, val, log(val) * (1.0f / M_LN2_F))
 //		return logM + logE;
 //	})
 
-/*
+/**
+ * Expected behavior:
+ *
+ * log(+-0) = -Inf
+ * log(1) = 0
+ * log(x) = Nan for x < 0
+ * log(+Inf) = +Inf
+ *
  * Taylor series (https://en.wikipedia.org/wiki/Natural_logarithm#Derivative.2C_Taylor_series)
  *
  * Has a maximum error of 4.1 * 10^7 (at x ~ 1.329*10^36 (x = 2^120))
@@ -619,11 +862,33 @@ COMPLEX_1(float, log, float, val,
 //log(x) = log2(x) / log2(e)
 //SIMPLE_1(float, log, float, x, log2(x) * (1.0f / M_LOG2E_F))
 
+/**
+ * Expected behavior:
+ *
+ * log10(+-0) = -Inf
+ * log10(1) = 0
+ * log10(x) = Nan for x < 0
+ * log10(+Inf) = +Inf
+ */
 //log10(x) = log(x) / log(10)
 SIMPLE_1(float, log10, float, x, log(x) * (1.0f / M_LN10_F))
 
+/**
+ * Expected behavior:
+ *
+ * log2(+-0) = +-0
+ * log2(-1) = -Inf
+ * log2(x) = Nan for x < -1
+ * log2(+Inf) = +Inf
+ */
 SIMPLE_1(float, log1p, float, x, log(1.0f + x))
 
+/**
+ * Expected behavior:
+ *
+ * logb(+-0) = -Inf
+ * logb(+-Inf) = +Inf
+ */
 //TODO correct?
 SIMPLE_1(float, logb, float, x, vc4cl_itof(ilogb(x)))
 
@@ -634,12 +899,25 @@ SIMPLE_2(float, maxmag, float, x, float, y, fabs(x) > fabs(y) ? x : (fabs(y) > f
 //"Returns x if |x|<|y|, y if |y|<|x|, otherwise fmin(x, y)"
 SIMPLE_2(float, minmag, float, x, float, y, fabs(x) < fabs(y) ? x : (fabs(y) < fabs(x) ? y : fmin(x, y)))
 
+/**
+ * Expected behavior:
+ *
+ * modf(+-x, iptr) = value with same sign as x
+ * modf(+-Inf, iptr) = +-0, iptr = +-Inf
+ * modf(NaN, iptr) = NaN, iptr = NaN
+ */
 //taken from pocl (https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/modf.cl)
 SIMPLE_2(float, modf, float, x, __global float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x),x)))
 SIMPLE_2(float, modf, float, x, __local float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x),x)))
 SIMPLE_2(float, modf, float, x, __private float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x),x)))
 
 SIMPLE_1(float, nan, uint, nancode, vc4cl_bitcast_float(NAN | nancode))
+/**
+ * Expected behavior:
+ *
+ * nextafter(-0, y > 0) = smallest positive denormal value
+ * nextafter(0, y < 0) = smallest negative denormal value
+ */
 COMPLEX_2(float, nextafter, float, x, float, y,
 {
 	//TODO correct??
@@ -652,6 +930,30 @@ COMPLEX_2(float, nextafter, float, x, float, y,
 			: (iy > 0 || ix > iy ? ix - 1 : ix + 1); /* x < y -> x -= ulp otherwise x += ulp */
 	return vc4cl_bitcast_float(res);
 })
+
+/**
+ * Expected behavior:
+ *
+ * pow(+-0, y) = +-Inf for y odd and y < 0
+ * pow(+-0, y) = +Inf for y even and y < 0
+ * pow(+-0, y) = +-0 for y odd and y > 0
+ * pow(+-0, y) = 0 for y even and y > 0
+ * pow(-1, +-Inf) = 1
+ * pow(1, y) = 1
+ * pow(x, +-0) = 1
+ * pow(x, y) = NaN for x < 0 and y not an integer
+ * pow(x, -Inf) = +Inf for |x| < 0
+ * pow(x, -Inf) = 0 for |x| > 0
+ * pow(x, +Inf) = 0 for |x| < 0
+ * pow(x, +Inf) = 0 for |x| > 0
+ * pow(-Inf, y) = -0 for y odd and y < 0
+ * pow(-Inf, y) = 0 for y even and y < 0
+ * pow(-Inf, y) = -Inf for y odd and y > 0
+ * pow(-Inf, y) = +Inf for y even and y > 0
+ * pow(+Inf, y) = 0 for y < 0
+ * pow(+Inf, y) = +Inf for y > 0
+ * pow(+-0, -Inf) =+Inf 
+ */
 //for pow, see also https://stackoverflow.com/questions/4518011/algorithm-for-powfloat-float
 SIMPLE_2(float, pow, float, x, float, y, y < 0.0f ? (result_t)1.0f / powr(x, y) : powr(x, y));
 
@@ -669,6 +971,15 @@ INLINE float fast_pow(float x, uint n) CONST
 	return result;
 }
 
+/**
+ * Expected behavior:
+ *
+ * pown(x, 0) = 1
+ * pown(+-0, n) = +-Inf for odd n and n < 0
+ * pown(+-0, n) = +Inf for even n and n < 0
+ * pown(+-0, n) = +-0 for odd n and n > 0
+ * pown(+-0, n) = 0 for even n and n > 0
+ */
 //TODO SIMPLE_2(float pown, float, x, int, y, y < 0 ? (result_t)1.0f / fast_pow(x, -y), fast_pow(x, y))
 INLINE float pown(float x, int n) OVERLOADABLE
 {
@@ -734,9 +1045,23 @@ INLINE float16 pown(float16 x, int16 n) OVERLOADABLE
 }
 
 
+/**
+ * Expected behavior:
+ *
+ * powr(x, +-0) = 1 for x > 0
+ * powr(+-0, y) = +Inf for y < 0
+ * powr(+-0, -Inf) = +Inf
+ * powr(+-0, y) = +0 for y > 0
+ * powr(1, y) = 1
+ * powr(x, y) = NaN for x < 0
+ * powr(+-0, +-0) = NaN
+ * powr(+Inf, +-0) = NaN
+ * powr(1, +-Inf) = NaN
+ * powr(x, NaN) = NaN for x >= 0
+ * powr(NaN, y) = NaN
+ */
 //"Compute x to the power y, where x is >= 0."
 //x^y = e^(y * ln(x))
-
 SIMPLE_2(float, powr, float, x, float, y, exp(y * log(x)))
 
 COMPLEX_2(float, remainder, float, x, float, y,
@@ -746,6 +1071,13 @@ result_t k = rint(x / y);
 return x - k * y;
 })
 
+/**
+ * Expected behavior:
+ *
+ * remquo(x, y, quo) = NaN, quo = 0 for x = +-Inf or y = 0 or x = NaN or y = NaN
+ * exp2(-Inf) = 0
+ * exp2(+Inf) = +Inf
+ */
 //taken from pocl (https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/remquo.cl)
 COMPLEX_3(float, remquo, float, x, float, y, __global int, *quo,
 {
@@ -766,6 +1098,11 @@ COMPLEX_3(float, remquo, float, x, float, y, __private int, *quo,
 	return x - k * y;
 })
 
+/**
+ * Expected behavior:
+ *
+ * rint(x) = -0 for -0.5 <= x < 0
+ */
 COMPLEX_1(float, rint, float, val,
 {
 	//" Round to nearest even integer. "
@@ -792,10 +1129,27 @@ COMPLEX_1(float, rint, float, val,
 	return tooBig ? val : result;
 })
 
+/**
+ * Expected behavior:
+ *
+ * rootn(+-0, n) = +-Inf for odd n < 0
+ * rootn(+-0, n) = +Inf for even n < 0
+ * rootn(+-0, n) = +-0 for odd n > 0
+ * rootn(+-0, n) = +0 for even n > 0
+ * rootn(x, n) = NaN for x < 0 and n even
+ * rootn(x, 0) = NaN
+ */
 //TODO different algorithm?
 SIMPLE_2(float, rootn, float, x, int, y, pow(x, (arg0_t)1.0f / vc4cl_itof(y)))
 //see: https://en.wikipedia.org/wiki/Nth_root_algorithm
 
+/**
+ * Expected behavior:
+ *
+ * round(+-0) = +-0
+ * round(+-Inf) = +-Inf
+ * round(x) = -0 for -0.5 < x < 0
+ */
 COMPLEX_1(float, round, float, val,
 {
 	//" Return the integral value nearest to x rounding halfway cases away from zero, regardless of the current rounding direction. "
@@ -835,6 +1189,12 @@ COMPLEX_1(float, rsqrt, float, x,
 	return u.x;
 })
 
+/**
+ * Expected behavior:
+ *
+ * sin(+-0) = +-0
+ * sin(+-Inf) = NaN for |x| > 1
+ */
 COMPLEX_1(float, sin, float, val,
 {
 	/*
@@ -910,6 +1270,12 @@ SIMPLE_2(float, sincos, float, x, __global float, *cosval, (*cosval = cos(x), si
 SIMPLE_2(float, sincos, float, x, __local float, *cosval, (*cosval = cos(x), sin(x)))
 SIMPLE_2(float, sincos, float, x, __private float, *cosval, (*cosval = cos(x), sin(x)))
 
+/**
+ * Expected behavior:
+ *
+ * sinh(+-0) = +-0
+ * sinh(+-Inf) = +-Inf
+ */
 COMPLEX_1(float, sinh, float, val,
 {
 	/*
@@ -985,6 +1351,14 @@ COMPLEX_1(float, sinh, float, val,
 	return tmp;
 })
 
+/**
+ * Expected behavior:
+ *
+ * sinpi(+-0) = +-0
+ * sinpi(n) = 0 for n integer and n > 0
+ * sinpi(n) = -0 for n integer and n < 0
+ * sinpi(+-Inf) = NaN
+ */
 SIMPLE_1(float, sinpi, float, val, sin(val * M_PI_F))
 
 COMPLEX_1(float, sqrt, float, val,
@@ -1007,19 +1381,56 @@ COMPLEX_1(float, sqrt, float, val,
 	return val == 0.0f ? (result_t)0.0f : x;
 })
 
+/**
+ * Expected behavior:
+ *
+ * tan(+-0) = +-0
+ * tan(+-Inf) = NaN
+ */
 //TODO different algorithm?!
 //Taylor Series is too inaccurate (converges too slow)
 SIMPLE_1(float, tan, float, val, sin(val) / cos(val))
 
+/**
+ * Expected behavior:
+ *
+ * tanh(+-0) = +-0
+ * tanh(+-Inf) = +-Inf
+ */
 //TODO different algorithm?!
 //Taylor Series is too inaccurate (converges too slow)
 SIMPLE_1(float, tanh, float, val, sinh(val)/cosh(val))
 
+/**
+ * Expected behavior:
+ *
+ * tanpi(+-0) = +-0
+ * tanpi(+-Inf) = NaN
+ * tanpi(n) = copysign(0,n) for n even and n integer
+ * tanpi(n) = copysign(0, -n) for n odd and n integer
+ * tanpi(x) = +Inf for x = n + 0.5 and n even integer
+ * tanpi(x) = -Inf for x = n + 0.5 and n odd integer
+ */
 SIMPLE_1(float, tanpi, float, val, tan(val * M_PI_F))
 
+/**
+ * Expected behavior:
+ *
+ * tgamma(+-0) = +-Inf
+ * tgamma(x) = NaN for x < 0 and x integer
+ * tgamma(-Inf) = NaN
+ * tgamma(+Inf) = +Inf
+ */
 //TODO different algorithm?!
 SIMPLE_1(float, tgamma, float, val, exp(lgamma(val)))
 
+/**
+ * Expected behavior:
+ *
+ * trunc(+-0) = +-0
+ * trunc(+-Inf) = +-Inf
+ * trunc(x) = -0 for -1 < x < 0
+ */
 COMPLEX_1(float, trunc, float, val,
 {
 	//"  Round to integer toward zero.  "
