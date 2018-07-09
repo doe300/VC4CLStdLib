@@ -67,7 +67,7 @@
 	INLINE FUNC_1(int, func, type##16, x) CONST \
 	{ \
 		/* (s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, sa, sb, sc, sd, se, sf) */ \
-		type##16 val0 = vc4cl_bitcast_##type(conv(x)); \
+		type##16 val0 = conv(x); \
 		/* (s0 op s1, s1 op s2, s2 op s3, s3 op s4, s4 op s5, s5 op s6, s6 op s7, s7 op s8, s8 op s9, s9 op sa, sa op sb, sb op sc, sc op sd, sd op se, se op sf, sf op s0) */ \
 		val0 = val0 op vc4cl_vector_rotate(val0, -1); \
 		/* (s0 op s1 op s2 op s3, s1 op s2 op s3 op s4, s2 op s3 op s4 op s5, s3 op s4 op s5 op s6, s4 op s5 op s6 op s7, s5 op s6 op s7 op s8, s6 op s7 op s8 op s9, s7 op s8 op s9 op sa, s8 op s9 op sa op sb, s9 op sa op sb op sc, sa op sb op sc op sd, sb op sc op sd op se, sc op sd op se op sf, ...) */ \
@@ -80,7 +80,7 @@
 	INLINE FUNC_1(int, func, type##8, x) CONST \
 	{ \
 		/* (s0, s1, s2, s3, s4, s5, s6, s7) */ \
-		type##8 val0 = vc4cl_bitcast_##type(conv(x)); \
+		type##8 val0 = conv(x); \
 		/* (s0 op s1, s1 op s2, s2 op s3, s3 op s4, s4 op s5, s5 op s6, s6 op s7, s7 op ?) */ \
 		val0 = val0 op vc4cl_vector_rotate(val0, -1); \
 		/* (s0 op s1 op s2 op s3, s1 op s2 op s3 op s4, s2 op s3 op s4 op s5, s3 op s4 op s5 op s6, s4 op s5 op s6 op s7, s5 op s6 op s7 op ?, s6 op s7 op ? op ?, s7 op ? op ? op ?) */ \
@@ -91,7 +91,7 @@
 	INLINE FUNC_1(int, func, type##4, x) CONST \
 	{ \
 		/* (x, y, z, w) */ \
-		type##4 val0 = vc4cl_bitcast_##type(conv(x)); \
+		type##4 val0 = conv(x); \
 		/* (x op y, y op z, z op w, w op ?) */ \
 		val0 = val0 op vc4cl_vector_rotate(val0, -1); \
 		/* (z op w, w op ?, ? op ?, ? op ?) */ \
@@ -101,17 +101,17 @@
 	} \
 	INLINE FUNC_1(int, func, type##3, x) CONST \
 	{ \
-		type##3 val = vc4cl_bitcast_##type(conv(x)); \
+		type##3 val = conv(x); \
 		return val.x op val.y op val.z; \
 	} \
 	INLINE FUNC_1(int, func, type##2, x) CONST \
 	{ \
-		type##2 val = vc4cl_bitcast_##type(conv(x)); \
+		type##2 val = conv(x); \
 		return val.x op val.y; \
 	} \
 	INLINE FUNC_1(int, func, type, x) CONST \
 	{ \
-		type val = vc4cl_bitcast_##type(conv(x)); \
+		type val = conv(x); \
 		return val; \
 	}
 
@@ -140,6 +140,7 @@ FOR_ALL_ELEMENTS(any, short, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, uint, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, int, |, vc4cl_msb_set)
 
+//TODO all(int4) is wrong, the rotation parameter are zeroinitializers?? The bit-cast is somehow optimized away
 FOR_ALL_ELEMENTS(all, uchar, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, char, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, ushort, &, vc4cl_msb_set)
@@ -162,48 +163,36 @@ SIMPLE_3(float, bitselect, float, a, float, b, float, c, vc4cl_bitcast_float((~v
 //"For each component of a vector type, result[i] = if MSB of c[i] is set ? b[i] : a[i]"
 //"For a scalar type, result = c ? b : a."
 //TODO "For a scalar type, result = c ? b : a." So no check for MSB!
-SIMPLE_3(uchar, select, uchar, a, uchar, b, uchar, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uchar, select, uchar, a, uchar, b, char, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uchar, select, uchar, a, uchar, b, ushort, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uchar, select, uchar, a, uchar, b, short, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uchar, select, uchar, a, uchar, b, uint, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uchar, select, uchar, a, uchar, b, int, c, vc4cl_bitcast_uchar(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, uchar, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, char, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, ushort, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, short, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, uint, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, int, c, vc4cl_bitcast_char(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, uchar, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, char, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, ushort, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, short, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, uint, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(ushort, select, ushort, a, ushort, b, int, c, vc4cl_bitcast_ushort(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, uchar, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, char, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, ushort, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, short, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, uint, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, int, c, vc4cl_bitcast_short(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, uchar, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, char, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, ushort, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, short, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, uint, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, int, c, vc4cl_bitcast_uint(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, uchar, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, char, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, ushort, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, short, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, uint, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, int, c, vc4cl_bitcast_int(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, uchar, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, char, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, ushort, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, short, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, uint, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, int, c, vc4cl_extend(vc4cl_msb_set(c)) ? b : a)
+COMPLEX_3(uchar, select, uchar, a, uchar, b, uchar, c,
+{
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
+	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
+})
+COMPLEX_3(uchar, select, uchar, a, uchar, b, char, c,
+{
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
+	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
+})
+SIMPLE_3(char, select, char, a, char, b, uchar, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(char, select, char, a, char, b, char, c, vc4cl_msb_set(c) ? b : a)
+COMPLEX_3(ushort, select, ushort, a, ushort, b, ushort, c,
+{
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
+	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
+})
+COMPLEX_3(ushort, select, ushort, a, ushort, b, short, c,
+{
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
+	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
+})
+SIMPLE_3(short, select, short, a, short, b, ushort, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(short, select, short, a, short, b, short, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(uint, select, uint, a, uint, b, uint, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(uint, select, uint, a, uint, b, int, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(int, select, int, a, int, b, uint, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(int, select, int, a, int, b, int, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(float, select, float, a, float, b, uint, c, vc4cl_msb_set(c) ? b : a)
+SIMPLE_3(float, select, float, a, float, b, int, c, vc4cl_msb_set(c) ? b : a)
 
 #undef COMPARISON_1
 #undef COMPARISON_2

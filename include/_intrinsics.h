@@ -296,12 +296,12 @@ SIMPLE_1(int, vc4cl_extend, int, val, val)
 /*
  * Other functions
  */
-SIMPLE_1(int, vc4cl_msb_set, uchar, val, vc4cl_extend((val >> 7) == (arg_t)1))
-SIMPLE_1(int, vc4cl_msb_set, char, val, vc4cl_extend((val >> 7) == (arg_t)1))
-SIMPLE_1(int, vc4cl_msb_set, ushort, val, vc4cl_extend((val >> 15) == (arg_t)1))
-SIMPLE_1(int, vc4cl_msb_set, short, val, vc4cl_extend((val >> 15) == (arg_t)1))
-SIMPLE_1(int, vc4cl_msb_set, uint, val, vc4cl_extend((val >> 31) == (arg_t)1))
-SIMPLE_1(int, vc4cl_msb_set, int, val, vc4cl_extend((val >> 31) == (arg_t)1))
+SIMPLE_1(uchar, vc4cl_msb_set, uchar, val, vc4cl_bitcast_uchar(vc4cl_extend(val >> 7 == (arg_t)1)))
+SIMPLE_1(char, vc4cl_msb_set, char, val, vc4cl_bitcast_char(vc4cl_and((arg_t)(val >> 7), (arg_t)1)) == (arg_t)1)
+SIMPLE_1(ushort, vc4cl_msb_set, ushort, val, vc4cl_bitcast_ushort(vc4cl_extend(val >> 15 == (arg_t)1)))
+SIMPLE_1(short, vc4cl_msb_set, short, val, vc4cl_bitcast_short(vc4cl_and((arg_t)(val >> 15), (arg_t)1)) == (arg_t)1)
+SIMPLE_1(uint, vc4cl_msb_set, uint, val, vc4cl_bitcast_uint(val >> 31 == 1))
+SIMPLE_1(int, vc4cl_msb_set, int, val, (val < (arg_t)0))
 
 /*
  * Vector functions

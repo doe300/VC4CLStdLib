@@ -37,9 +37,9 @@ SIMPLE_1(uint, abs, uint, val, val)
 
 //based on pocl (pocl/lib/kernel/abs_diff.cl)
 SIMPLE_2(uchar, abs_diff, uchar, x, uchar, y, (result_t)abs(x > y ? x - y : y - x))
-SIMPLE_2(uchar, abs_diff, char, x, char, y, vc4cl_bitcast_char(vc4cl_msb_set(x & y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
+SIMPLE_2(uchar, abs_diff, char, x, char, y, (vc4cl_msb_set(x & y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
 SIMPLE_2(ushort, abs_diff, ushort, x, ushort, y, (result_t)abs(x > y ? x - y : y - x))
-SIMPLE_2(ushort, abs_diff, short, x, short, y, vc4cl_bitcast_short(vc4cl_msb_set(x & y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
+SIMPLE_2(ushort, abs_diff, short, x, short, y, (vc4cl_msb_set(x & y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
 SIMPLE_2(uint, abs_diff, uint, x, uint, y, abs(x > y ? x - y : y - x))
 SIMPLE_2(uint, abs_diff, int, x, int, y, vc4cl_msb_set(x & y) ? /* same sign -> no under/overflow */ abs(x - y) : /* different signs */ abs(x) + abs(y))
 
