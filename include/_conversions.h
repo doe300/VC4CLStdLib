@@ -146,6 +146,69 @@
 		}
 
 /*
+ * Need special handling for values > INT_MAX, since itof() is signed
+ */
+//TODO saturation?
+#define CONVERT_UINT_TO_FLOAT(saturation, rounding) \
+		INLINE float convert_float##saturation##rounding(uint val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		} \
+		INLINE float##2 convert_float2##saturation##rounding(uint2 val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		} \
+		INLINE float##3 convert_float3##saturation##rounding(uint3 val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		} \
+		INLINE float##4 convert_float4##saturation##rounding(uint4 val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		} \
+		INLINE float##8 convert_float8##saturation##rounding(uint8 val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		} \
+		INLINE float##16 convert_float16##saturation##rounding(uint16 val) OVERLOADABLE CONST \
+		{ \
+			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
+		}
+
+//TODO depending on what the VC4 does with out-of-range floating-point values, this could be optimized
+#define CONVERT_FLOAT_TO_UINT(saturation, rounding) \
+		INLINE uint convert_uint##saturation##rounding(float val) OVERLOADABLE CONST \
+		{ \
+			float tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		} \
+		INLINE uint##2 convert_uint2##saturation##rounding(float2 val) OVERLOADABLE CONST \
+		{ \
+			float2 tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		} \
+		INLINE uint##3 convert_uint3##saturation##rounding(float3 val) OVERLOADABLE CONST \
+		{ \
+			float3 tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		} \
+		INLINE uint##4 convert_uint4##saturation##rounding(float4 val) OVERLOADABLE CONST \
+		{ \
+			float4 tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		} \
+		INLINE uint##8 convert_uint8##saturation##rounding(float8 val) OVERLOADABLE CONST \
+		{ \
+			float8 tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		} \
+		INLINE uint##16 convert_uint16##saturation##rounding(float16 val) OVERLOADABLE CONST \
+		{ \
+			float16 tmp = vc4cl_fmin(val, 2.14748352e9f); \
+			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
+		}
+
+/*
  * To uchar
  */
 CONVERT_INTEGER(uchar, uchar, /* no saturation*/, /* no rounding */)
@@ -504,16 +567,16 @@ CONVERT_INTEGER(uint, int, _sat, _rte)
 CONVERT_INTEGER(uint, int, _sat, _rtz)
 CONVERT_INTEGER(uint, int, _sat, _rtp)
 CONVERT_INTEGER(uint, int, _sat, _rtn)
-CONVERT_FLOAT_TO_INTEGER(uint, /* no saturation*/, /* no rounding */)
-CONVERT_FLOAT_TO_INTEGER(uint, /* no saturation*/, _rte)
-CONVERT_FLOAT_TO_INTEGER(uint, /* no saturation*/, _rtz)
-CONVERT_FLOAT_TO_INTEGER(uint, /* no saturation*/, _rtp)
-CONVERT_FLOAT_TO_INTEGER(uint, /* no saturation*/, _rtn)
-CONVERT_FLOAT_TO_INTEGER(uint, _sat, /* no rounding */)
-CONVERT_FLOAT_TO_INTEGER(uint, _sat, _rte)
-CONVERT_FLOAT_TO_INTEGER(uint, _sat, _rtz)
-CONVERT_FLOAT_TO_INTEGER(uint, _sat, _rtp)
-CONVERT_FLOAT_TO_INTEGER(uint, _sat, _rtn)
+CONVERT_FLOAT_TO_UINT(/* no saturation*/, /* no rounding */)
+CONVERT_FLOAT_TO_UINT(/* no saturation*/, _rte)
+CONVERT_FLOAT_TO_UINT(/* no saturation*/, _rtz)
+CONVERT_FLOAT_TO_UINT(/* no saturation*/, _rtp)
+CONVERT_FLOAT_TO_UINT(/* no saturation*/, _rtn)
+CONVERT_FLOAT_TO_UINT(_sat, /* no rounding */)
+CONVERT_FLOAT_TO_UINT(_sat, _rte)
+CONVERT_FLOAT_TO_UINT(_sat, _rtz)
+CONVERT_FLOAT_TO_UINT(_sat, _rtp)
+CONVERT_FLOAT_TO_UINT(_sat, _rtn)
 
 /*
  * To int
@@ -632,16 +695,16 @@ CONVERT_INTEGER_TO_FLOAT(short, _sat, _rte)
 CONVERT_INTEGER_TO_FLOAT(short, _sat, _rtz)
 CONVERT_INTEGER_TO_FLOAT(short, _sat, _rtp)
 CONVERT_INTEGER_TO_FLOAT(short, _sat, _rtn)
-CONVERT_INTEGER_TO_FLOAT(uint, /* no saturation*/, /* no rounding */)
-CONVERT_INTEGER_TO_FLOAT(uint, /* no saturation*/, _rte)
-CONVERT_INTEGER_TO_FLOAT(uint, /* no saturation*/, _rtz)
-CONVERT_INTEGER_TO_FLOAT(uint, /* no saturation*/, _rtp)
-CONVERT_INTEGER_TO_FLOAT(uint, /* no saturation*/, _rtn)
-CONVERT_INTEGER_TO_FLOAT(uint, _sat, /* no rounding */)
-CONVERT_INTEGER_TO_FLOAT(uint, _sat, _rte)
-CONVERT_INTEGER_TO_FLOAT(uint, _sat, _rtz)
-CONVERT_INTEGER_TO_FLOAT(uint, _sat, _rtp)
-CONVERT_INTEGER_TO_FLOAT(uint, _sat, _rtn)
+CONVERT_UINT_TO_FLOAT(/* no saturation*/, /* no rounding */)
+CONVERT_UINT_TO_FLOAT(/* no saturation*/, _rte)
+CONVERT_UINT_TO_FLOAT(/* no saturation*/, _rtz)
+CONVERT_UINT_TO_FLOAT(/* no saturation*/, _rtp)
+CONVERT_UINT_TO_FLOAT(/* no saturation*/, _rtn)
+CONVERT_UINT_TO_FLOAT(_sat, /* no rounding */)
+CONVERT_UINT_TO_FLOAT(_sat, _rte)
+CONVERT_UINT_TO_FLOAT(_sat, _rtz)
+CONVERT_UINT_TO_FLOAT(_sat, _rtp)
+CONVERT_UINT_TO_FLOAT(_sat, _rtn)
 CONVERT_INTEGER_TO_FLOAT(int, /* no saturation*/, /* no rounding */)
 CONVERT_INTEGER_TO_FLOAT(int, /* no saturation*/, _rte)
 CONVERT_INTEGER_TO_FLOAT(int, /* no saturation*/, _rtz)
