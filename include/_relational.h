@@ -75,7 +75,7 @@
 		/* (s0 op s1 op s2 op s3 op s4 op s5 op s6 op s7, ..., s8 op s9 op sa op ab op sc op sd op se op sf, ...) */ \
 		const type##16 val2 = val1 op vc4cl_vector_rotate(val1, -4); \
 		/* s0 op s1 op s2 op s3 op s4 op s5 op s6 op s7 op s8 op s9 op sa op ab op sc op sd op se op sf */ \
-		return (val2 op val1 op vc4cl_vector_rotate(val2, -8)).x; \
+		return (val2 op val1 op vc4cl_vector_rotate(val2, -8)).x != 0; \
 	} \
 	INLINE FUNC_1(int, func, type##8, x) CONST \
 	{ \
@@ -86,7 +86,7 @@
 		/* (s0 op s1 op s2 op s3, s1 op s2 op s3 op s4, s2 op s3 op s4 op s5, s3 op s4 op s5 op s6, s4 op s5 op s6 op s7, s5 op s6 op s7 op ?, s6 op s7 op ? op ?, s7 op ? op ? op ?) */ \
 		const type##8 val1 = val0 op vc4cl_vector_rotate(val0, -2); \
 		/* s0 op s1 op s2 op s3 op s4 op s5 op s6 op s7 */ \
-		return (val1 op vc4cl_vector_rotate(val1, -4)).x; \
+		return (val1 op vc4cl_vector_rotate(val1, -4)).x != 0; \
 	} \
 	INLINE FUNC_1(int, func, type##4, x) CONST \
 	{ \
@@ -97,22 +97,22 @@
 		/* (z op w, w op ?, ? op ?, ? op ?) */ \
 		const type##4 val1 = vc4cl_vector_rotate(val0, -2); \
 		/* (x op y op z op w, ...) */ \
-		return (val0 op val1).x; \
+		return (val0 op val1).x != 0; \
 	} \
 	INLINE FUNC_1(int, func, type##3, x) CONST \
 	{ \
 		type##3 val = conv(x); \
-		return val.x op val.y op val.z; \
+		return (val.x op val.y op val.z) != 0; \
 	} \
 	INLINE FUNC_1(int, func, type##2, x) CONST \
 	{ \
 		type##2 val = conv(x); \
-		return val.x op val.y; \
+		return (val.x op val.y) != 0; \
 	} \
 	INLINE FUNC_1(int, func, type, x) CONST \
 	{ \
 		type val = conv(x); \
-		return val; \
+		return val != 0; \
 	}
 
 COMPARISON_2(isequal, x == y)
@@ -121,7 +121,7 @@ COMPARISON_2(isgreater, x > y)
 COMPARISON_2(isgreaterequal, x >= y)
 COMPARISON_2(isless, x < y)
 COMPARISON_2(islessequal, x <= y)
-COMPARISON_2(islessgreater, x < y || y > x)
+COMPARISON_2(islessgreater, (x < y) || (x > y))
 
 COMPARISON_1(isfinite, (vc4cl_bitcast_uint(val) & NAN) != INF)
 COMPARISON_1(isinf, (vc4cl_bitcast_uint(val) & NAN) == INF)
