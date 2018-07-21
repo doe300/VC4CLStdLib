@@ -146,6 +146,8 @@ COMPLEX_1(float, atan, float, val,
 })
 
 /**
+ * https://en.wikipedia.org/wiki/Atan2#Definition_and_computation
+ *
  * Expected behavior:
  *
  * atan2(+-0, -0) = +-pi
@@ -160,8 +162,24 @@ COMPLEX_1(float, atan, float, val,
  * atan2(+-Inf, -Inf) = +-3/4pi
  * atan2(+-Inf, +Inf) = +-pi/4
  */
-//TODO wrong: https://en.wikipedia.org/wiki/Atan2
-SIMPLE_2(float, atan2, float, x, float, y, atan(x / y))
+COMPLEX_2(float, atan2, float, y, float, x, {
+	// note: these calculation work since the condition is either 0 or all bits set
+	result_t tan = atan(y / x);
+	result_t s = sign(y);
+	int_t xG0 = x > 0;
+	int_t xL0 = x < 0;
+	int_t yEq0 = y == 0;
+	// arctan(y / x) if x > 0
+	int_t res0 = xG0 & vc4cl_bitcast_int(tan);
+	// arctan(y / x) + sign(y) * pi if x < 0, y != 0
+	int_t res1 = xL0 & ~yEq0 & vc4cl_bitcast_int(tan + s * M_PI_F);
+	// pi if x < 0, y = 0
+	int_t res2 = xL0 & yEq0 & vc4cl_bitcast_int(M_PI_F);
+	// sign(y) * pi/2 if x = 0, y != 0
+	int_t res3 = (x == 0) & ~yEq0 & vc4cl_bitcast_int(s * M_PI_2_F);
+	// undefined if x = 0, y = 0
+	return vc4cl_bitcast_float(res0 | res1 | res2 | res3);
+})
 
 /**
  * Expected behavior:
