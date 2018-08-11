@@ -16,6 +16,10 @@
 
 /*
  * ALU operations
+ *
+ * NOTE: These operations directly map to the machine instructions and do not
+ * heed other data-types (e.g. vc4cl_clz will always return the leading zeroes to
+ * full 32-bit width)
  */
 OVERLOAD_2(float, vc4cl_fmax, float, x, float, y)
 OVERLOAD_2(float, vc4cl_fmin, float, x, float, y)

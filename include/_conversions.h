@@ -11,6 +11,10 @@
 #include "_overloads.h"
 #include "_intrinsics.h"
 
+// trick to allow concatenating macro (content!!) to symbol
+#define CC(A, B) CONCAT_(A, B)
+#define CONCAT_(A, B) A##B
+
 #define uchar_MIN 0
 #define uchar_MAX UCHAR_MAX
 #define char_MIN SCHAR_MIN
@@ -33,180 +37,257 @@
 #define _rtp 3
 #define _rtn 4
 
-//TODO is wrong for int <-> uint ??!
-#define SATURATE(destType, num, val) (vc4cl_bitcast_int(vc4cl_extend(val)) < vc4cl_bitcast_int(vc4cl_extend((destType##num)(destType##_MIN))) ? vc4cl_bitcast_int(vc4cl_extend(destType##_MIN)) : (vc4cl_bitcast_int(vc4cl_extend(val)) > vc4cl_bitcast_int(vc4cl_extend((destType##num)(destType##_MAX))) ? vc4cl_bitcast_int(vc4cl_extend(destType##_MAX)) : vc4cl_bitcast_int(vc4cl_extend(val))))
-#define SATURATE_FLOAT(destType, num, val) (vc4cl_bitcast_int(vc4cl_extend(val)) < vc4cl_bitcast_int((int##num)(destType##_MIN)) ? vc4cl_bitcast_int(vc4cl_extend(destType##_MIN)) : (vc4cl_bitcast_int(vc4cl_extend(val)) > vc4cl_bitcast_int((int##num)(destType##_MAX)) ? vc4cl_bitcast_int(vc4cl_extend(destType##_MAX)) : vc4cl_bitcast_int(vc4cl_extend(val))))
-#define ROUND_TO_INTEGER(mode, val) (0##mode == _rte ? rint(val) : (0##mode == _rtz ? trunc(val) : (0##mode == _rtp ? ceil(val) : (0##mode == _rtn ? floor(val) : val))))
+#define SATURATE_INTEGER(destType, srcType, num, val) \
+  /* special case for uint as destination type */ \
+  (uint)CC(destType,_MAX) == (uint) UINT_MAX ? \
+    /* only need to clamp at lower bound (zero) */ \
+    vc4cl_bitcast_int(vc4cl_max(vc4cl_bitcast_int(vc4cl_extend(val)), 0, VC4CL_SIGNED)) : \
+  /* special case for uint as source type */ \
+  (uint)CC(srcType,_MAX) == (uint) UINT_MAX ? \
+    /* need to remove high-bit (sign-bit) */ \
+    vc4cl_bitcast_int(clamp(vc4cl_bitcast_uint(vc4cl_extend(val)) > (uint##num)0x7FFFFFFF ? (int##num)0x7FFFFFFF : vc4cl_bitcast_int(vc4cl_extend(val)), (int##num)destType##_MIN, (int##num)destType##_MAX)) : \
+  vc4cl_bitcast_int(clamp(vc4cl_bitcast_int(vc4cl_extend(val)), (int##num)destType##_MIN, (int##num)destType##_MAX)) \
 
-#define CONVERSION_WITH_SATURATION(destType, num, saturation, val) 0##saturation == _sat ? SATURATE(destType, num, val) : vc4cl_bitcast_int(vc4cl_extend(val))
-#define CONVERSION_WITH_SATURATION_FLOAT(destType, num, saturation, val) 0##saturation == _sat ? SATURATE_FLOAT(destType, num, val) : vc4cl_bitcast_int(vc4cl_extend(val))
+//TODO is this correct? Esp. the bitcast?!
+#define SATURATE_FLOAT(destType, num, val) \
+  (vc4cl_bitcast_int(vc4cl_extend(val)) < vc4cl_bitcast_int((int##num)(destType##_MIN)) ? \
+    vc4cl_bitcast_int(vc4cl_extend(destType##_MIN)) : \
+  (vc4cl_bitcast_int(vc4cl_extend(val)) > vc4cl_bitcast_int((int##num)(destType##_MAX)) ? \
+    vc4cl_bitcast_int(vc4cl_extend(destType##_MAX)) : \
+  vc4cl_bitcast_int(vc4cl_extend(val))))
+
+#define ROUND_TO_INTEGER(mode, val) \
+  (0##mode == _rte ? \
+    rint(val) : \
+  (0##mode == _rtz ? \
+    trunc(val) : \
+  (0##mode == _rtp ? \
+    ceil(val) : \
+  (0##mode == _rtn ? \
+    floor(val) : \
+  val))))
+
+#define CONVERSION_WITH_SATURATION(destType, srcType, num, saturation, val) \
+  0##saturation == _sat ? \
+    SATURATE_INTEGER(destType, srcType, num, val) : \
+  vc4cl_bitcast_int(vc4cl_extend(val))
+
+#define CONVERSION_WITH_SATURATION_FLOAT(destType, num, saturation, val) \
+  0##saturation == _sat ? \
+    SATURATE_FLOAT(destType, num, val) : \
+  vc4cl_bitcast_int(vc4cl_extend(val))
 
 #define CONVERT_INTEGER(destType, srcType, saturation, rounding) \
-		INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, /* scalar */, saturation, val)); \
-		} \
-		INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 2, saturation, val)); \
-		} \
-		INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 3, saturation, val)); \
-		} \
-		INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 4, saturation, val)); \
-		} \
-		INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 8, saturation, val)); \
-		} \
-		INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 16, saturation, val)); \
-		}
+        INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, /* scalar */, saturation, val)); \
+        } \
+        INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 2, saturation, val)); \
+        } \
+        INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 3, saturation, val)); \
+        } \
+        INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 4, saturation, val)); \
+        } \
+        INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 8, saturation, val)); \
+        } \
+        INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 16, saturation, val)); \
+        }
 
+/*
+* Out-of-range behavior of float-to-integer conversion is implementation specified (OpenCL 1.2, section 6.2.3.3)
+* -> we always saturate
+*/
 #define CONVERT_FLOAT_TO_INTEGER(destType, saturation, rounding) \
-		INLINE destType convert_##destType##saturation##rounding(float val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, /* scalar */, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		} \
-		INLINE destType##2 convert_##destType##2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 2, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		} \
-		INLINE destType##3 convert_##destType##3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 3, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		} \
-		INLINE destType##4 convert_##destType##4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 4, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		} \
-		INLINE destType##8 convert_##destType##8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 8, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		} \
-		INLINE destType##16 convert_##destType##16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, 16, saturation, vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)))); \
-		}
+        INLINE destType convert_##destType##saturation##rounding(float val) OVERLOADABLE CONST \
+        { \
+            int saturatedInt = val >= 2147483648.0f ? 0x7FFFFFFF : val <= -2147483648.0f ? 0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, /* scalar */, saturation, saturatedInt)); \
+        } \
+        INLINE destType##2 convert_##destType##2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
+        { \
+            int2 saturatedInt = val >= 2147483648.0f ? (int2)0x7FFFFFFF : val <= -2147483648.0f ? (int2)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 2, saturation, saturatedInt)); \
+        } \
+        INLINE destType##3 convert_##destType##3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
+        { \
+            int3 saturatedInt = val >= 2147483648.0f ? (int3)0x7FFFFFFF : val <= -2147483648.0f ? (int3)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 3, saturation, saturatedInt)); \
+        } \
+        INLINE destType##4 convert_##destType##4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
+        { \
+            int4 saturatedInt = val >= 2147483648.0f ? (int4)0x7FFFFFFF : val <= -2147483648.0f ? (int4)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 4, saturation, saturatedInt)); \
+        } \
+        INLINE destType##8 convert_##destType##8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
+        { \
+            int8 saturatedInt = val >= 2147483648.0f ? (int8)0x7FFFFFFF : val <= -2147483648.0f ? (int8)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 8, saturation, saturatedInt)); \
+        } \
+        INLINE destType##16 convert_##destType##16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
+        { \
+            int16 saturatedInt = val >= 2147483648.0f ? (int16)0x7FFFFFFF : val <= -2147483648.0f ? (int16)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 16, saturation, saturatedInt)); \
+        }
 
 #define CONVERT_INTEGER_TO_FLOAT(srcType, saturation, rounding) \
-		INLINE float convert_float##saturation##rounding(srcType val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, /* scalar */, saturation, val)); \
-		} \
-		INLINE float##2 convert_float2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 2, saturation, val)); \
-		} \
-		INLINE float##3 convert_float3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 3, saturation, val)); \
-		} \
-		INLINE float##4 convert_float4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 4, saturation, val)); \
-		} \
-		INLINE float##8 convert_float8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 8, saturation, val)); \
-		} \
-		INLINE float##16 convert_float16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 16, saturation, val)); \
-		}
+        INLINE float convert_float##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, /* scalar */, saturation, val)); \
+        } \
+        INLINE float##2 convert_float2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 2, saturation, val)); \
+        } \
+        INLINE float##3 convert_float3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 3, saturation, val)); \
+        } \
+        INLINE float##4 convert_float4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 4, saturation, val)); \
+        } \
+        INLINE float##8 convert_float8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 8, saturation, val)); \
+        } \
+        INLINE float##16 convert_float16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 16, saturation, val)); \
+        }
 
 #define CONVERT_FLOAT_TO_FLOAT(saturation, rounding) \
-		INLINE float convert_float##saturation##rounding(float val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		} \
-		INLINE float##2 convert_float2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		} \
-		INLINE float##3 convert_float3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		} \
-		INLINE float##4 convert_float4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		} \
-		INLINE float##8 convert_float8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		} \
-		INLINE float##16 convert_float16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
-		{ \
-			return ROUND_TO_INTEGER(rounding, val); \
-		}
+        INLINE float convert_float##saturation##rounding(float val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        } \
+        INLINE float##2 convert_float2##saturation##rounding(float##2 val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        } \
+        INLINE float##3 convert_float3##saturation##rounding(float##3 val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        } \
+        INLINE float##4 convert_float4##saturation##rounding(float##4 val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        } \
+        INLINE float##8 convert_float8##saturation##rounding(float##8 val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        } \
+        INLINE float##16 convert_float16##saturation##rounding(float##16 val) OVERLOADABLE CONST \
+        { \
+            return ROUND_TO_INTEGER(rounding, val); \
+        }
 
 /*
  * Need special handling for values > INT_MAX, since itof() is signed
  */
-//TODO saturation?
+//XXX could be wrong in very rare cases if "original" conversion would round differently due to cut off last bit
 #define CONVERT_UINT_TO_FLOAT(saturation, rounding) \
-		INLINE float convert_float##saturation##rounding(uint val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		} \
-		INLINE float##2 convert_float2##saturation##rounding(uint2 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		} \
-		INLINE float##3 convert_float3##saturation##rounding(uint3 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		} \
-		INLINE float##4 convert_float4##saturation##rounding(uint4 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		} \
-		INLINE float##8 convert_float8##saturation##rounding(uint8 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		} \
-		INLINE float##16 convert_float16##saturation##rounding(uint16 val) OVERLOADABLE CONST \
-		{ \
-			return vc4cl_itof(vc4cl_bitcast_int(val & 0x7FFFFFFF)) + vc4cl_bitcast_float(vc4cl_asr(val, 31) & 0x4F000000); \
-		}
+        INLINE float convert_float##saturation##rounding(uint val) OVERLOADABLE CONST \
+        { \
+            /* For the rounding mode: find */ \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        } \
+        INLINE float##2 convert_float2##saturation##rounding(uint2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        } \
+        INLINE float##3 convert_float3##saturation##rounding(uint3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        } \
+        INLINE float##4 convert_float4##saturation##rounding(uint4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        } \
+        INLINE float##8 convert_float8##saturation##rounding(uint8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        } \
+        INLINE float##16 convert_float16##saturation##rounding(uint16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+        }
 
+/*
+ * Out-of-range behavior of float-to-integer conversion is implementation specified (OpenCL 1.2, section 6.2.3.3)
+ * -> we always saturate
+ */
 //TODO depending on what the VC4 does with out-of-range floating-point values, this could be optimized
 #define CONVERT_FLOAT_TO_UINT(saturation, rounding) \
-		INLINE uint convert_uint##saturation##rounding(float val) OVERLOADABLE CONST \
-		{ \
-			float tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		} \
-		INLINE uint##2 convert_uint2##saturation##rounding(float2 val) OVERLOADABLE CONST \
-		{ \
-			float2 tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		} \
-		INLINE uint##3 convert_uint3##saturation##rounding(float3 val) OVERLOADABLE CONST \
-		{ \
-			float3 tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		} \
-		INLINE uint##4 convert_uint4##saturation##rounding(float4 val) OVERLOADABLE CONST \
-		{ \
-			float4 tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		} \
-		INLINE uint##8 convert_uint8##saturation##rounding(float8 val) OVERLOADABLE CONST \
-		{ \
-			float8 tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		} \
-		INLINE uint##16 convert_uint16##saturation##rounding(float16 val) OVERLOADABLE CONST \
-		{ \
-			float16 tmp = vc4cl_fmin(val, 2.14748352e9f); \
-			return vc4cl_bitcast_uint(vc4cl_ftoi(tmp)) + vc4cl_bitcast_uint(vc4cl_ftoi(val - tmp)); \
-		}
+        INLINE uint convert_uint##saturation##rounding(float val) OVERLOADABLE CONST \
+        { \
+              return val <= 0 ? \
+                0 : \
+              val >= 4294967296.0f ? \
+                0xFFFFFFFFu : \
+              val >= 2147483648.0f ? \
+                vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+              vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        } \
+        INLINE uint##2 convert_uint2##saturation##rounding(float2 val) OVERLOADABLE CONST \
+        { \
+            return val <= 0 ? \
+                  0 : \
+            val >= 4294967296.0f ? \
+                  0xFFFFFFFFu : \
+            val >= 2147483648.0f ? \
+                  vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+            vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        } \
+        INLINE uint##3 convert_uint3##saturation##rounding(float3 val) OVERLOADABLE CONST \
+        { \
+            return val <= 0 ? \
+                  0 : \
+            val >= 4294967296.0f ? \
+                  0xFFFFFFFFu : \
+            val >= 2147483648.0f ? \
+                  vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+            vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        } \
+        INLINE uint##4 convert_uint4##saturation##rounding(float4 val) OVERLOADABLE CONST \
+        { \
+            return val <= 0 ? \
+                  0 : \
+            val >= 4294967296.0f ? \
+                  0xFFFFFFFFu : \
+            val >= 2147483648.0f ? \
+                  vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+            vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        } \
+        INLINE uint##8 convert_uint8##saturation##rounding(float8 val) OVERLOADABLE CONST \
+        { \
+            return val <= 0 ? \
+                  0 : \
+            val >= 4294967296.0f ? \
+                  0xFFFFFFFFu : \
+            val >= 2147483648.0f ? \
+                  vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+            vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        } \
+        INLINE uint##16 convert_uint16##saturation##rounding(float16 val) OVERLOADABLE CONST \
+        { \
+            return val <= 0 ? \
+                  0 : \
+            val >= 4294967296.0f ? \
+                  0xFFFFFFFFu : \
+            val >= 2147483648.0f ? \
+                  vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
+            vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
+        }
 
 /*
  * To uchar
@@ -731,10 +812,10 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
  */
 /*
 #define AS_TYPE(dstType, srcType) \
-	INLINE dstType as_##dstType(srcType val) OVERLOADABLE CONST \
-	{ \
-		return ((union { srcType src; dstType dst; }) { .src = val}).dst; \
-	}
+    INLINE dstType as_##dstType(srcType val) OVERLOADABLE CONST \
+    { \
+        return ((union { srcType src; dstType dst; }) { .src = val}).dst; \
+    }
 
 AS_TYPE(uchar, uchar)
 AS_TYPE(uchar, char)
@@ -1080,7 +1161,7 @@ AS_TYPE(float16, float16)
 #undef _rtz
 #undef _rtp
 #undef _rtn
-#undef SATURATE
+#undef SATURATE_INTEGER
 #undef SATURATE_FLOAT
 #undef ROUND_TO_INTEGER
 #undef CONVERSION_WITH_SATURATION
@@ -1089,6 +1170,11 @@ AS_TYPE(float16, float16)
 #undef CONVERT_FLOAT_TO_INTEGER
 #undef CONVERT_INTEGER_TO_FLOAT
 #undef CONVERT_FLOAT_TO_FLOAT
+#undef CONVERT_UINT_TO_FLOAT
+#undef CONVERT_FLOAT_TO_UINT
+
+#undef CONCAT_
+#undef CC
 
 #endif /* VC4CL_CONVERSIONS_H */
 
