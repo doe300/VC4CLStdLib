@@ -625,6 +625,62 @@
 		content \
 	}
 
+#define COMPLEX_3_SCALAR(ret, func, argType0, argName0, argType1, argName1, argType2, argName2, content) \
+	INLINE FUNC_3(ret##16, func, argType0##16, argName0, argType1##16, argName1, argType2, argName2) \
+	{ \
+		typedef argType0##16 arg0_t;\
+		typedef argType1##16 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret##16 result_t;\
+		typedef int##16 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(ret##8, func, argType0##8, argName0, argType1##8, argName1, argType2, argName2) \
+	{ \
+		typedef argType0##8 arg0_t;\
+		typedef argType1##8 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret##8 result_t;\
+		typedef int##8 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(ret##4, func, argType0##4, argName0, argType1##4, argName1, argType2, argName2) \
+	{ \
+		typedef argType0##4 arg0_t;\
+		typedef argType1##4 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret##4 result_t;\
+		typedef int##4 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(ret##3, func, argType0##3, argName0, argType1##3, argName1, argType2, argName2) \
+	{ \
+		typedef argType0##3 arg0_t;\
+		typedef argType1##3 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret##3 result_t;\
+		typedef int##3 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(ret##2, func, argType0##2, argName0, argType1##2, argName1, argType2, argName2) \
+	{ \
+		typedef argType0##2 arg0_t;\
+		typedef argType1##2 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret##2 result_t;\
+		typedef int##2 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(ret, func, argType0, argName0, argType1, argName1, argType2, argName2) \
+	{ \
+		typedef argType0 arg0_t;\
+		typedef argType1 arg1_t;\
+		typedef argType2 arg2_t;\
+		typedef ret result_t;\
+		typedef int int_t; \
+		content \
+	}
+
 #define OVERLOAD_ALL_IMAGE_TYPES(ret, func) \
 	CONST FUNC_1(ret, func, read_only image1d_t, image); \
 	CONST FUNC_1(ret, func, write_only image1d_t, image); \
