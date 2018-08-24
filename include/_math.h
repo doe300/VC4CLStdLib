@@ -559,7 +559,7 @@ COMPLEX_1(float, exp10, float, val, {
 	/* argument reduction via equivalence: e^ab = (e^a)^b */
 	/* more specific: e^(M*2^E) = (e^M)^(2^E) */
 	int_t exponent = ilogb(val);
-	result_t tmp = ldexp(1, exponent);
+	result_t tmp = ldexp((arg_t)1.0f, exponent);
 	// val = val / tmp;
 	// TODO negative exponents!
 	// TODO to apply above argument reduction, need efficient power with power of two
@@ -695,19 +695,19 @@ COMPLEX_2(float, frexp, float, x, __global int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp(1, e);
+	return x / ldexp((arg0_t)1.0f, e);
 })
 COMPLEX_2(float, frexp, float, x, __local int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp(1, e);
+	return x / ldexp((arg0_t)1.0f, e);
 })
 COMPLEX_2(float, frexp, float, x, __private int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp(1, e);
+	return x / ldexp((arg0_t)1.0f, e);
 })
 
 /**
