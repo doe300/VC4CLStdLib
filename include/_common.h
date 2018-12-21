@@ -13,6 +13,14 @@
 
 /*
  * Common functions
+ *
+ * Some functions have no maximum error in the OpenCL specification, see here: https://github.com/KhronosGroup/OpenCL-Docs/issues/33
+ *
+ * degrees -> 2 ULP
+ * radians -> 2 ULP
+ * mix -> "implementation defined"
+ * smoothstep -> "implementation defined"
+ * clamp, min, max, step, sign -> 0 ULP
  */
 
 SIMPLE_3(float, clamp, float, x, float, minval, float, maxval, fmin(fmax(x, minval), maxval))
@@ -24,7 +32,7 @@ SIMPLE_2(float, max, float, x, float, y, vc4cl_fmax(x, y))
 SIMPLE_2_SCALAR(float, max, float, x, float, y, vc4cl_fmax(x, y))
 
 SIMPLE_2(float, min, float, x, float, y, vc4cl_fmin(x, y))
-SIMPLE_2_SCALAR(float, min, float, x, float, y, vc4cl_fmax(x, y))
+SIMPLE_2_SCALAR(float, min, float, x, float, y, vc4cl_fmin(x, y))
 
 //" Returns the linear blend of x and y implemented as:
 // x + (y - x) * a

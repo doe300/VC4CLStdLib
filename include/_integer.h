@@ -10,6 +10,7 @@
 #include "_config.h"
 #include "_intrinsics.h"
 #include "_operators.h"
+#include "_flags.h"
 
 #define SIMPLE_INTEGER_2(func, argName0, argName1, content) \
 		SIMPLE_2(uchar, func, uchar, argName0, uchar, argName1, content) \
@@ -98,10 +99,9 @@ COMPLEX_3(uint, mad_sat, uint, x, uint, y, uint, z,
 })
 COMPLEX_3(int, mad_sat, int, x, int, y, int, z,
 {
+	//TODO need to saturate multiplication too
 	result_t a = x * y;
-	return INT_MAX - a < z ? (result_t)INT_MAX :
-		INT_MIN + a > z ? (result_t)INT_MIN :
-			a + z;
+	return vc4cl_saturated_add(a, z);
 })
 
 SIMPLE_2(uchar, max, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_max(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))

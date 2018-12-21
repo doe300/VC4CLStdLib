@@ -34,7 +34,7 @@
 	} \
 	INLINE FUNC_1(int, func, float, val) CONST \
 	{ \
-		return content; \
+		return (content) ? 1 : 0; \
 	}
 
 #define COMPARISON_2(func, content) \
@@ -60,7 +60,7 @@
 	} \
 	INLINE FUNC_2(int, func, float, x, float, y) CONST \
 	{ \
-		return content; \
+		return (content) ? 1 : 0; \
 	}
 
 #define FOR_ALL_ELEMENTS(func, type, op, conv) \
@@ -115,6 +115,39 @@
 		return val != 0; \
 	}
 
+#define SELECT_SCALAR(type, maskType, content) \
+	INLINE FUNC_3(type, select, type, a, type, b, maskType, c) CONST \
+	{ \
+		return content; \
+	}
+
+#define SELECT_VECTOR(type, maskType, content) \
+	INLINE FUNC_3(type##2, select, type##2, a, type##2, b, maskType##2, c) CONST \
+	{ \
+		typedef int##2 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(type##3, select, type##3, a, type##3, b, maskType##3, c) CONST \
+	{ \
+		typedef int##3 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(type##4, select, type##4, a, type##4, b, maskType##4, c) CONST \
+	{ \
+		typedef int##4 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(type##8, select, type##8, a, type##8, b, maskType##8, c) CONST \
+	{ \
+		typedef int##8 int_t; \
+		content \
+	} \
+	INLINE FUNC_3(type##16, select, type##16, a, type##16, b, maskType##16, c) CONST \
+	{ \
+		typedef int##16 int_t; \
+		content \
+	} \
+
 COMPARISON_2(isequal, x == y)
 COMPARISON_2(isnotequal, x != y)
 COMPARISON_2(isgreater, x > y)
@@ -131,7 +164,31 @@ COMPARISON_1(isnormal, !isinf(val) && !isnan(val) && (((vc4cl_bitcast_uint(val) 
 COMPARISON_2(isordered, isequal(x, x) && isequal(y, y))
 COMPARISON_2(isunordered, isnan(x) || isnan(y))
 
-COMPARISON_1(signbit, vc4cl_bitcast_int(vc4cl_bitcast_uint(val) & 0x80000000U))
+// for vector,directly use asr, for scalar shr. This is way more efficient than everything else (1 instruction)
+INLINE FUNC_1(int16, signbit, float16, val) CONST
+{
+       return vc4cl_asr(vc4cl_bitcast_uint(val), 31);
+}
+INLINE FUNC_1(int8, signbit, float8, val) CONST
+{
+       return vc4cl_asr(vc4cl_bitcast_uint(val), 31);
+}
+INLINE FUNC_1(int4, signbit, float4, val) CONST
+{
+       return vc4cl_asr(vc4cl_bitcast_uint(val), 31);
+}
+INLINE FUNC_1(int3, signbit, float3, val) CONST
+{
+       return vc4cl_asr(vc4cl_bitcast_uint(val), 31);
+}
+INLINE FUNC_1(int2, signbit, float2, val) CONST
+{
+       return vc4cl_asr(vc4cl_bitcast_uint(val), 31);
+}
+INLINE FUNC_1(int, signbit, float, val) CONST
+{
+       return vc4cl_bitcast_uint(val) >> 31;
+}
 
 FOR_ALL_ELEMENTS(any, uchar, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, char, |, vc4cl_msb_set)
@@ -160,43 +217,89 @@ SIMPLE_3(uint, bitselect, uint, a, uint, b, uint, c, (~c & a) | (c & b))
 SIMPLE_3(int, bitselect, int, a, int, b, int, c, (~c & a) | (c & b))
 SIMPLE_3(float, bitselect, float, a, float, b, float, c, vc4cl_bitcast_float((~vc4cl_bitcast_uint(c) & vc4cl_bitcast_uint(a)) | (vc4cl_bitcast_uint(c) & vc4cl_bitcast_uint(b))))
 
-//"For each component of a vector type, result[i] = if MSB of c[i] is set ? b[i] : a[i]"
 //"For a scalar type, result = c ? b : a."
-//TODO "For a scalar type, result = c ? b : a." So no check for MSB!
-COMPLEX_3(uchar, select, uchar, a, uchar, b, uchar, c,
+SELECT_SCALAR(uchar, uchar, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(uchar, char, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(char, uchar, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(char, char, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(ushort, ushort, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(ushort, short, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(short, ushort, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(short, short, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(uint, uint, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(uint, int, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(int, uint, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(int, int, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(float, uint, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(float, int, vc4cl_extend(c) ? b : a)
+
+//"For each component of a vector type, result[i] = if MSB of c[i] is set ? b[i] : a[i]"
+SELECT_VECTOR(uchar, uchar,
 {
 	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
 	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
-COMPLEX_3(uchar, select, uchar, a, uchar, b, char, c,
+SELECT_VECTOR(uchar, char,
 {
 	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
 	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
-SIMPLE_3(char, select, char, a, char, b, uchar, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(char, select, char, a, char, b, char, c, vc4cl_msb_set(c) ? b : a)
-COMPLEX_3(ushort, select, ushort, a, ushort, b, ushort, c,
+SELECT_VECTOR(char, char,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(char, uchar,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(ushort, ushort,
 {
 	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
 	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
-COMPLEX_3(ushort, select, ushort, a, ushort, b, short, c,
+SELECT_VECTOR(ushort, short,
 {
 	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
 	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
-SIMPLE_3(short, select, short, a, short, b, ushort, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(short, select, short, a, short, b, short, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, uint, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(uint, select, uint, a, uint, b, int, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, uint, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(int, select, int, a, int, b, int, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, uint, c, vc4cl_msb_set(c) ? b : a)
-SIMPLE_3(float, select, float, a, float, b, int, c, vc4cl_msb_set(c) ? b : a)
+SELECT_VECTOR(short, short,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(short, ushort,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(uint, uint,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(uint, int,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(int, int,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(int, uint,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(float, uint,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(float, int,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
 
 #undef COMPARISON_1
 #undef COMPARISON_2
 #undef FOR_ALL_ELEMENTS
+#undef SELECT_SCALAR
+#undef SELECT_VECTOR
 
 #endif /* VC4CL_RELATIONAL_H */
 

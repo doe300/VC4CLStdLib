@@ -7,7 +7,7 @@
 #ifndef VC4CL_MATH_H
 #define VC4CL_MATH_H
 
-#include "./_common.h"
+#include "_common.h"
 #include "_intrinsics.h"
 
 // TODO test-cases for all the known Edge Case Behavior
