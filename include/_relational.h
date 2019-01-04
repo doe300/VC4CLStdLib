@@ -14,23 +14,23 @@
 #define COMPARISON_1(func, content) \
 	INLINE FUNC_1(int##16, func, float##16, val) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int##8, func, float##8, val) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int##4, func, float##4, val) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int##3, func, float##3, val) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int##2, func, float##2, val) CONST \
-	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+	{ /* 1 instead of -1 here on purpose! */ \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int, func, float, val) CONST \
 	{ \
@@ -40,26 +40,26 @@
 #define COMPARISON_2(func, content) \
 	INLINE FUNC_2(int##16, func, float##16, x, float##16, y) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_2(int##8, func, float##8, x, float##8, y) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_2(int##4, func, float##4, x, float##4, y) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_2(int##3, func, float##3, x, float##3, y) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_2(int##2, func, float##2, x, float##2, y) CONST \
 	{ \
-		return (content) ? vc4cl_bitcast_int(ALL_BITS_SET) : 0; \
+		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_2(int, func, float, x, float, y) CONST \
-	{ \
+	{ /* 1 instead of -1 here on purpose! */ \
 		return (content) ? 1 : 0; \
 	}
 
@@ -148,6 +148,14 @@
 		content \
 	} \
 
+/*
+ * The checks for NaNs as defined in the specification are done in the intrinsic of the comparison operators:
+ *
+ * "The relational functions isequal, isgreater, isgreaterequal, isless, islessequal, and islessgreater
+ * always return 0 if either argument is not a number (NaN). isnotequal returns 1 if one or both
+ * arguments are not a number (NaN) and the argument type is a scalar [...]"
+ * - OpenCL 1.2, section 6.12.6 Relational Functions
+ */
 COMPARISON_2(isequal, x == y)
 COMPARISON_2(isnotequal, x != y)
 COMPARISON_2(isgreater, x > y)
@@ -156,11 +164,12 @@ COMPARISON_2(isless, x < y)
 COMPARISON_2(islessequal, x <= y)
 COMPARISON_2(islessgreater, (x < y) || (x > y))
 
-COMPARISON_1(isfinite, (vc4cl_bitcast_uint(val) & NAN) != INF)
+// From <cmath>: "A finite value is any floating-point value that is neither infinite nor NaN (Not-A-Number)."
+COMPARISON_1(isfinite, !vc4cl_is_inf_nan(val))
 COMPARISON_1(isinf, (vc4cl_bitcast_uint(val) & NAN) == INF)
-COMPARISON_1(isnan, (vc4cl_bitcast_uint(val) & NAN) == NAN)
+COMPARISON_1(isnan, vc4cl_is_nan(val))
+// From <cmath>: "Returns whether x is a normal value: i.e., whether it is neither infinity, NaN, zero or subnormal."
 COMPARISON_1(isnormal, !isinf(val) && !isnan(val) && (((vc4cl_bitcast_uint(val) & 0x7F800000) != 0) /* neither zero nor denormal */ || ((vc4cl_bitcast_uint(val) & 0x7FFFFFFF) == 0) /* +/- zero */))
-
 COMPARISON_2(isordered, isequal(x, x) && isequal(y, y))
 COMPARISON_2(isunordered, isnan(x) || isnan(y))
 

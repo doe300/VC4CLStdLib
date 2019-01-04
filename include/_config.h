@@ -20,7 +20,7 @@
  */
 #define M_LOG210    3.01029995663981195214f /* log_2(10) */
 #undef NAN
-#define NAN         0x7fc00000U
+#define NAN         0x7fffffffU /* same as defined in OpenCL C, but as integer */
 #undef INF
 #define INF			0x7f800000U
 
