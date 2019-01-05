@@ -44,7 +44,7 @@ SIMPLE_2(ushort, abs_diff, short, x, short, y, (vc4cl_msb_set(x) == vc4cl_msb_se
 SIMPLE_2(uint, abs_diff, uint, x, uint, y, abs(x > y ? x - y : y - x))
 SIMPLE_2(uint, abs_diff, int, x, int, y, (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ abs(x - y) : /* different signs */ abs(x) + abs(y))
 
-SIMPLE_2(uchar, add_sat, uchar, x, uchar, y, vc4cl_saturate_lsb(vc4cl_extend(x) + vc4cl_extend(y)))
+SIMPLE_2(uchar, add_sat, uchar, x, uchar, y, vc4cl_v8adds(x, y))
 SIMPLE_2(char, add_sat, char, x, char, y, vc4cl_bitcast_char(clamp(vc4cl_extend(x) + vc4cl_extend(y), SCHAR_MIN, SCHAR_MAX)))
 SIMPLE_2(ushort, add_sat, ushort, x, ushort, y, vc4cl_bitcast_ushort(clamp(vc4cl_extend(x) + vc4cl_extend(y), (uint) 0, (uint) USHRT_MAX)))
 //SIMPLE_2(short, add_sat, short, x, short, y, vc4cl_bitcast_short(clamp(vc4cl_extend(x) + vc4cl_extend(y), SHRT_MIN, SHRT_MAX)))
@@ -104,8 +104,8 @@ COMPLEX_3(int, mad_sat, int, x, int, y, int, z,
 	return vc4cl_saturated_add(a, z);
 })
 
-SIMPLE_2(uchar, max, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_max(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
-SIMPLE_2_SCALAR(uchar, max, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_max(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
+SIMPLE_2(uchar, max, uchar, x, uchar, y, vc4cl_v8max(x, y))
+SIMPLE_2_SCALAR(uchar, max, uchar, x, uchar, y, vc4cl_v8max(x, y))
 SIMPLE_2(char, max, char, x, char, y, vc4cl_bitcast_char(vc4cl_max(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2_SCALAR(char, max, char, x, char, y, vc4cl_bitcast_char(vc4cl_max(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2(ushort, max, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_max(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
@@ -117,8 +117,8 @@ SIMPLE_2_SCALAR(uint, max, uint, x, uint, y, vc4cl_msb_set(x | y) != vc4cl_msb_s
 SIMPLE_2(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
 
-SIMPLE_2(uchar, min, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_min(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
-SIMPLE_2_SCALAR(uchar, min, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_min(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
+SIMPLE_2(uchar, min, uchar, x, uchar, y, vc4cl_v8min(x, y))
+SIMPLE_2_SCALAR(uchar, min, uchar, x, uchar, y, vc4cl_v8min(x, y))
 SIMPLE_2(char, min, char, x, char, y, vc4cl_bitcast_char(vc4cl_min(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2_SCALAR(char, min, char, x, char, y, vc4cl_bitcast_char(vc4cl_min(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2(ushort, min, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_min(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
@@ -140,7 +140,7 @@ SIMPLE_2(short, rotate, short, x, short, y, vc4cl_bitcast_short(vc4cl_extend(vc4
 SIMPLE_2(uint, rotate, uint, x, uint, y, vc4cl_bitcast_uint(vc4cl_ror(x, -vc4cl_bitcast_int(y))))
 SIMPLE_2(int, rotate, int, x, int, y, vc4cl_bitcast_int(vc4cl_ror(x, -y)))
 
-SIMPLE_2(uchar, sub_sat, uchar, x, uchar, y, x < y ? (result_t)0 : x - y)
+SIMPLE_2(uchar, sub_sat, uchar, x, uchar, y, vc4cl_v8subs(x, y))
 SIMPLE_2(char, sub_sat, char, x, char, y, vc4cl_bitcast_char(clamp(vc4cl_extend(x) - vc4cl_extend(y), SCHAR_MIN, SCHAR_MAX)))
 SIMPLE_2(ushort, sub_sat, ushort, x, ushort, y, x < y ? (result_t)0 : x - y)
 //SIMPLE_2(short, sub_sat, short, x, short, y, vc4cl_bitcast_short(clamp(vc4cl_extend(x) - vc4cl_extend(y), SHRT_MIN, SHRT_MAX)))

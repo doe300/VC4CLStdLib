@@ -52,6 +52,15 @@ OVERLOAD_3_SCALAR(int, vc4cl_mul24, short, x, short, y, uchar, sign)
 OVERLOAD_3_SCALAR(uint, vc4cl_mul24, uint, x, uint, y, uchar, sign)
 OVERLOAD_3_SCALAR(int, vc4cl_mul24, int, x, int, y, uchar, sign)
 
+OVERLOAD_2(uchar, vc4cl_v8adds, uchar, x, uchar, y)
+OVERLOAD_2(uint, vc4cl_v8adds, uint, x, uint, y)
+OVERLOAD_2(uchar, vc4cl_v8subs, uchar, x, uchar, y)
+OVERLOAD_2(uint, vc4cl_v8subs, uint, x, uint, y)
+OVERLOAD_2(uchar, vc4cl_v8min, uchar, x, uchar, y)
+OVERLOAD_2(uint, vc4cl_v8min, uint, x, uint, y)
+OVERLOAD_2(uchar, vc4cl_v8max, uchar, x, uchar, y)
+OVERLOAD_2(uint, vc4cl_v8max, uint, x, uint, y)
+
 /*
  * Pack/unpack modes
  */
@@ -306,6 +315,9 @@ SIMPLE_1(ushort, vc4cl_msb_set, ushort, val, vc4cl_bitcast_ushort(vc4cl_extend(v
 SIMPLE_1(short, vc4cl_msb_set, short, val, vc4cl_bitcast_short(vc4cl_and((arg_t)(val >> 15), (arg_t)1)) == (arg_t)1)
 SIMPLE_1(uint, vc4cl_msb_set, uint, val, vc4cl_bitcast_uint(val >> 31 == 1))
 SIMPLE_1(int, vc4cl_msb_set, int, val, (val < (arg_t)0))
+
+OVERLOAD_1(int, vc4cl_is_nan, float, val)
+OVERLOAD_1(int, vc4cl_is_inf_nan, float, val)
 
 /*
  * Vector functions
