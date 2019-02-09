@@ -11,6 +11,8 @@
 #include "_intrinsics.h"
 
 // TODO test-cases for all the known Edge Case Behavior
+// TODO can remove nan-check from rounding functions? The large value check should also contain NaNs,
+// since VC4 considers NaNs to be the "largest" values
 
 /*
  * Remove some macros for more efficient versions
@@ -274,6 +276,29 @@ COMPLEX_1(float, ceil, float, val, {
 SIMPLE_2(float, copysign, float, x, float, y,
 	vc4cl_bitcast_float((vc4cl_bitcast_uint(y) & 0x80000000) | (vc4cl_bitcast_uint(x) & 0x7FFFFFFF)))
 
+COMPLEX_1(float, cos_pade, float, val, {
+	/*
+	 * Pade approximation
+	 * (https://ir.canterbury.ac.nz/bitstream/handle/10092/8886/brookes_thesis.pdf?sequence=1, page 86)
+	 *
+	 * Has a relative error of far less than 2^23 (1 ULP) for [-PI/2, PI/2], then rises fast
+	 *
+	 * Alternative:
+	 * (see alternative for sin_pade)
+	 */
+	arg_t a = 45469.0f * val * val * val * val * val * val * val * val;
+	arg_t b = 7029024.0f * val * val * val * val * val * val;
+	arg_t c = 348731040.0f * val * val * val * val;
+	arg_t d = 5269904640.0f * val * val;
+	arg_t e = 10983772800.0f;
+	arg_t f = 9336.0f * val * val * val * val * val * val;
+	arg_t g = 2064720.0f * val * val * val * val;
+	arg_t h = 221981760.0f * val * val;
+	arg_t up = a - b + c - d + e;
+	arg_t down = f + g + h + e;
+	return up / down;
+})
+
 /**
  * Expected behavior:
  *
@@ -282,69 +307,27 @@ SIMPLE_2(float, copysign, float, x, float, y,
  */
 COMPLEX_1(float, cos, float, val, {
 	/*
-	 * https://en.wikipedia.org/wiki/Taylor_series#Approximation_and_convergence
-	 *
-	 * This version (the Taylor-series up to x^16/16!) has following accuracy:
-	 *
-	 * cos(PI) -> error of 2*10^-7 <= ulp(PI) = 2*10^-7
-	 * cos(0.5f) -> error of < 10^-9 < ulp(0.5f) = 5*10^-8
-	 * cos(0.0f) -> error of < 10^-49 < ulp(0.0f) = 1*10^-45
-	 *
 	 * OpenCL 1.2 EMBEDDED PROFILE allows an error of up to 4 ulp
+	 *
+	 * We use argument reduction to bring it into range [-pi/2, pi/2] in which range the Pade approximation is accurate.
 	 */
-	const result_t fac2 = 1.0f / factorial(2);
-	const result_t fac4 = 1.0f / factorial(4);
-	const result_t fac6 = 1.0f / factorial(6);
-	const result_t fac8 = 1.0f / factorial(8);
-	const result_t fac10 = 1.0f / factorial(10);
-	const result_t fac12 = 1.0f / factorial(12);
-	const result_t fac14 = 1.0f / factorial(14);
-	const result_t fac16 = 1.0f / factorial(16);
-	result_t x = val;
-	/// TODO optimize!!
-	/*
-	while(x < -M_PI_F)
-	{
-	x = x + 2 * M_PI_F;
-	}
-	while(x > M_PI_F)
-	{
-	x = x - 2 * M_PI_F;
-	}
-	 */
-	result_t x2 = x * x;
-	result_t tmp1 = x2 * fac2;
-	// cos(x) = 1 - x^2/2! + ...
-	result_t tmp = 1 - tmp1;
-	result_t x4 = x2 * x * x;
-	tmp1 = x4 * fac4;
-	//... + x^4/4! - ...
-	tmp = x + tmp1;
-	result_t x6 = x4 * x * x;
-	tmp1 = x6 * fac6;
-	//... - x^6/6! + ...
-	tmp = tmp - tmp1;
-	result_t x8 = x6 * x * x;
-	tmp1 = x8 + fac8;
-	//... + x^8/8! - ...
-	tmp = tmp + tmp1;
-	result_t x10 = x8 * x * x;
-	tmp1 = x10 * fac10;
-	//... - x^10/10! + ...
-	tmp = tmp - tmp1;
-	result_t x12 = x10 * x * x;
-	tmp1 = x12 + fac12;
-	//... + x^12/12! - ...
-	tmp = tmp + tmp1;
-	result_t x14 = x12 * x * x;
-	tmp1 = x14 * fac14;
-	//... - x^14/14! + ...
-	tmp = tmp - tmp1;
-	result_t x16 = x14 * x * x;
-	tmp1 = x16 + fac16;
-	//... + x^16/16!
-	tmp = tmp + tmp1;
-	return tmp;
+	// TODO normalization into [-pi/2, pi/2] is too inaccurate for large values!
+
+	// Since cosine has a period of 2pi, these rewrites do not change the result (rounding error excluded):
+	// bring into range [-2pi, 2pi]
+	arg_t modifiedVal = fmod(val, 2.0f * M_PI_F);
+	// bring into range [-pi, pi]
+	modifiedVal = modifiedVal < -M_PI_F ? modifiedVal + (2.0f * M_PI_F) : modifiedVal;
+	modifiedVal = modifiedVal > M_PI_F ? modifiedVal - (2.0f * M_PI_F) : modifiedVal;
+
+	// We move by half a period, so we must invert the sign of the result
+	// bring into range [-pi/2, pi/2]
+	int_t invertSign = modifiedVal < -M_PI_2_F || modifiedVal > M_PI_2_F;
+	modifiedVal = modifiedVal < -M_PI_2_F ? modifiedVal + M_PI_F : modifiedVal;
+	modifiedVal = modifiedVal > M_PI_2_F ? modifiedVal - M_PI_F : modifiedVal;
+
+	arg_t result = cos_pade(invertSign ? -modifiedVal : modifiedVal);
+	return invertSign ? -result : result;
 })
 
 /**
@@ -559,7 +542,7 @@ COMPLEX_1(float, exp10, float, val, {
 	/* argument reduction via equivalence: e^ab = (e^a)^b */
 	/* more specific: e^(M*2^E) = (e^M)^(2^E) */
 	int_t exponent = ilogb(val);
-	result_t tmp = ldexp((arg_t)1.0f, exponent);
+	result_t tmp = ldexp((arg_t) 1.0f, exponent);
 	// val = val / tmp;
 	// TODO negative exponents!
 	// TODO to apply above argument reduction, need efficient power with power of two
@@ -647,7 +630,7 @@ SIMPLE_2_SCALAR(float, fmin, float, x, float, y, vc4cl_fmin(x, y))
  * fmod(x, y) = NaN for x = +-Inf or x = 0
  * fmod(x, +-Inf) = x
  */
-//"Modulus. Returns x � y * trunc(x/y)"
+//"Modulus. Returns x - y * trunc(x/y)"
 SIMPLE_2(float, fmod, float, x, float, y, x - y * trunc(x / y))
 
 /**
@@ -695,19 +678,19 @@ COMPLEX_2(float, frexp, float, x, __global int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp((arg0_t)1.0f, e);
+	return x / ldexp((arg0_t) 1.0f, e);
 })
 COMPLEX_2(float, frexp, float, x, __local int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp((arg0_t)1.0f, e);
+	return x / ldexp((arg0_t) 1.0f, e);
 })
 COMPLEX_2(float, frexp, float, x, __private int, *exp, {
 	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
 	int_t e = ilogb(x);
 	*exp = e;
-	return x / ldexp((arg0_t)1.0f, e);
+	return x / ldexp((arg0_t) 1.0f, e);
 })
 
 /**
@@ -796,6 +779,32 @@ COMPLEX_2(float, lgamma_r, float, x, __private int, *signp, {
 	result_t tmp = lgamma(x);
 	*signp = tmp < 0.0f ? -1 : (tmp == 0.0f) ? 0 : 1;
 	return lgamma(x < 0.0f ? (-1.0f * x) : x);
+})
+
+COMPLEX_1(float, log1p_pade, float, val, {
+	/*
+	 * Calculates ln(1 + x) via Pade approximation
+	 * (https://ir.canterbury.ac.nz/bitstream/handle/10092/8886/brookes_thesis.pdf?sequence=1, page 72/96)
+	 *
+	 * Has a relative error of less than 2*2^23 (2 ULP) for range [-0.5, 2], then rises fast
+	 */
+	// g(x) = (49x^6+1218x^5+7980x^4+20720x^3+23100x^2+9240x)/(10x^6+420x^5+4200x^4+16800x^3+31500x^2+27720x+9240)
+	arg_t a = 49.0f * val * val * val * val * val * val;
+	arg_t b = 1218.0f * val * val * val * val * val;
+	arg_t c = 7980.0f * val * val * val * val;
+	arg_t d = 20720.0f * val * val * val;
+	arg_t e = 23100.0f * val * val;
+	arg_t f = 9240.0f * val;
+	arg_t g = 10.0f * val * val * val * val * val * val;
+	arg_t h = 420.0f * val * val * val * val * val;
+	arg_t i = 4200.0f * val * val * val * val;
+	arg_t k = 16800.0f * val * val * val;
+	arg_t l = 31500.0f * val * val;
+	arg_t m = 27720.0f * val;
+	arg_t n = 9240.0f;
+	arg_t up = a + b + c + d + e + f;
+	arg_t down = g + h + i + k + l + m + n;
+	return up / down;
 })
 
 //    COMPLEX_1(float, log2, float, val,
@@ -951,6 +960,7 @@ COMPLEX_1(float, log10, float, val, {
  * log2(x) = Nan for x < -1
  * log2(+Inf) = +Inf
  */
+ //TODO use log1p_pade(), needs argument reduction
 SIMPLE_1(float, log1p, float, x, log(1.0f + x))
 
 /**
@@ -1176,6 +1186,31 @@ COMPLEX_1(float, rsqrt, float, x, {
 	return u.x;
 })
 
+COMPLEX_1(float, sin_pade, float, val, {
+	/*
+	 * Pade approximation
+	 * (https://en.wikipedia.org/wiki/Pad%C3%A9_approximant#Examples)
+	 *
+	 * Has a relative error of less than 2^23 (1 ULP) for range [-PI/2, PI/2], then rises fast
+	 *
+	 * Alternative:
+	 * Mendenhall algorithm to calculate both sine and cosine:
+	 * - Is also exact enough for range [-PI/2, PI/2]
+	 * - https://arxiv.org/pdf/cs/0406049.pdf
+	 * -
+	 * https://github.com/broadcomCM/android_hardware_broadcom_brcm_usrlib/blob/ics/dag/vmcsx/middleware/khronos/glsl/glsl_mendenhall.c
+	 */
+	arg_t a = 12671.0f / 4363920.0f;
+	arg_t b = 2363.0f / 18183.0f;
+	arg_t c = 445.0f / 12122.0f;
+	arg_t d = 601.0f / 872784.0f;
+	arg_t e = 121.0f / 16662240.0f;
+
+	arg_t up = (a * val * val * val * val * val) - (b * val * val * val) + val;
+	arg_t down = 1.0f + (c * val * val) + (d * val * val * val * val) + (e * val * val * val * val * val * val);
+	return up / down;
+})
+
 /**
  * Expected behavior:
  *
@@ -1184,72 +1219,27 @@ COMPLEX_1(float, rsqrt, float, x, {
  */
 COMPLEX_1(float, sin, float, val, {
 	/*
-	 * https://en.wikipedia.org/wiki/Taylor_series#Approximation_and_convergence
-	 *
-	 * This version (the Taylor-series up to x^17/17!) has following accuracy:
-	 *
-	 * sin(PI) -> error of 2*10^-8 < ulp(PI) = 2*10^-7
-	 * sin(0.5f) -> error of < 10^-10 < ulp(0.5f) = 5*10^-8
-	 * sin(0.0f) -> error of < 10^-48 < ulp(0.0f) = 1*10^-45
-	 *
 	 * OpenCL 1.2 EMBEDDED PROFILE allows an error of up to 4 ulp
 	 *
-	 * Alternative: via Pade approximant (https://en.wikipedia.org/wiki/Pad%C3%A9_approximant#Examples)
-	 * has an maximal error (in range -1/2 PI to 1/2 PI) of 1.10^7, but requires a division
+	 * We use argument reduction to bring it into range [-pi/2, pi/2] in which range the Pade approximation is accurate.
 	 */
-	const result_t fac3 = 1.0f / factorial(3);
-	const result_t fac5 = 1.0f / factorial(5);
-	const result_t fac7 = 1.0f / factorial(7);
-	const result_t fac9 = 1.0f / factorial(9);
-	const result_t fac11 = 1.0f / factorial(11);
-	const result_t fac13 = 1.0f / factorial(13);
-	const result_t fac15 = 1.0f / factorial(15);
-	const result_t fac17 = 1.0f / factorial(17);
+	// TODO normalization into [-pi/2, pi/2] is too inaccurate for large values!
 
-	result_t x = val;
-	/// TODO optimize!!
-	/*
-	while(x < -M_PI_F)
-	{
-	x = x + 2 * M_PI_F;
-	}
-	while(x > M_PI_F)
-	{
-	x = x - 2 * M_PI_F;
-	}*/
-	result_t x3 = x * x * x;
-	result_t tmp1 = x3 * fac3;
-	// sin(x) = x - x^3/3! + ...
-	result_t tmp = x - tmp1;
-	result_t x5 = x3 * x * x;
-	tmp1 = x5 * fac5;
-	//... + x^5/5! - ...
-	tmp = x + tmp1;
-	result_t x7 = x5 * x * x;
-	tmp1 = x7 * fac7;
-	//... - x^7/7! + ...
-	tmp = tmp - tmp1;
-	result_t x9 = x7 * x * x;
-	tmp1 = x9 * fac9;
-	//... + x^9/9! - ...
-	tmp = tmp + tmp1;
-	result_t x11 = x9 * x * x;
-	tmp1 = x11 * fac11;
-	//... - x^11/11! + ...
-	tmp = tmp - tmp1;
-	result_t x13 = x11 * x * x;
-	tmp1 = x13 * fac13;
-	//... + x^13/13! - ...
-	tmp = tmp + tmp1;
-	result_t x15 = x13 * x * x;
-	tmp1 = x15 * fac15;
-	//... - x^15/15! + ...
-	tmp = tmp - tmp1;
-	result_t x17 = x15 * x * x;
-	tmp1 = x17 * fac17;
-	//... + x^17/17!
-	tmp = tmp + tmp1;
-	return tmp;
+	// Since sine has a period of 2pi, these rewrites do not change the result (rounding error excluded):
+	// bring into range [-2pi, 2pi]
+	arg_t modifiedVal = fmod(val, 2.0f * M_PI_F);
+	// bring into range [-pi, pi]
+	modifiedVal = modifiedVal < -M_PI_F ? modifiedVal + (2.0f * M_PI_F) : modifiedVal;
+	modifiedVal = modifiedVal > M_PI_F ? modifiedVal - (2.0f * M_PI_F) : modifiedVal;
+
+	// We move by half a period, so we must invert the sign of the result
+	// bring into range [-pi/2, pi/2]
+	int_t invertSign = modifiedVal < -M_PI_2_F || modifiedVal > M_PI_2_F;
+	modifiedVal = modifiedVal < -M_PI_2_F ? modifiedVal + M_PI_F : modifiedVal;
+	modifiedVal = modifiedVal > M_PI_2_F ? modifiedVal - M_PI_F : modifiedVal;
+
+	arg_t result = sin_pade(modifiedVal);
+	return invertSign ? -result : result;
 })
 
 SIMPLE_2(float, sincos, float, x, __global float, *cosval, (*cosval = cos(x), sin(x)))
