@@ -78,7 +78,10 @@ uint atomic_dec(counter32_t counter) OVERLOADABLE;
  *  uint arm_dot_acc(uchar4 a, uchar4 b, uint acc)
  *  int arm_dot_acc(short2 a, short2 b, int acc)
  *  uint arm_dot_acc(ushort2 a, ushort2 b, uint acc)
- * calculate integer dot product (and additionally adds the scalar value)
+ *  int arm_dot_acc_sat(char4 a, char4 b, int acc)
+ *  uint arm_dot_acc_sat(uchar4 a, uchar4 b, uint acc)
+ * calculate integer dot product (and additionally adds the scalar value).
+ * For the functions xxx_sat, the final addition is saturating.
  *
  * See https://www.khronos.org/registry/OpenCL/extensions/arm/cl_arm_integer_dot_product.txt
  */
@@ -91,6 +94,9 @@ uint atomic_dec(counter32_t counter) OVERLOADABLE;
 #ifndef cl_arm_integer_dot_product_accumulate_int16
 #define cl_arm_integer_dot_product_accumulate_int16 1
 #endif
+#ifndef cl_arm_integer_dot_product_accumulate_saturate_int8
+#define cl_arm_integer_dot_product_accumulate_saturate_int8 1
+#endif
 
 // prototypes to prevent warnings
 int arm_dot(char4 a, char4 b)  OVERLOADABLE;
@@ -99,6 +105,8 @@ int arm_dot_acc(char4 a, char4 b, int acc) OVERLOADABLE;
 uint arm_dot_acc(uchar4 a, uchar4 b, uint acc) OVERLOADABLE;
 int arm_dot_acc(short2 a, short2 b, int acc) OVERLOADABLE;
 uint arm_dot_acc(ushort2 a, ushort2 b, uint acc) OVERLOADABLE;
+int arm_dot_acc_sat(char4 a, char4 b, int acc) OVERLOADABLE;
+uint arm_dot_acc_sat(uchar4 a, uchar4 b, uint acc) OVERLOADABLE;
 
 /**
  * (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w)
@@ -142,6 +150,23 @@ uint arm_dot_acc(ushort2 a, ushort2 b, uint acc) OVERLOADABLE CONST
 {
 	uint2 tmp = vc4cl_mul24(a, b, VC4CL_UNSIGNED);
 	return acc + tmp.s0 + tmp.s1;
+}
+
+/**
+ * acc + [ (a.x * b.x) + (a.y * b.y) + (a.z * b.z) + (a.w * b.w) ]
+ *
+ * The final accumulation is saturating.
+ */
+int arm_dot_acc_sat(char4 a, char4 b, int acc) OVERLOADABLE CONST
+{
+	int4 tmp = vc4cl_mul24(a, b, VC4CL_SIGNED);
+	return add_sat(acc, tmp.s0 + tmp.s1 + tmp.s2 + tmp.s3);
+}
+
+uint arm_dot_acc_sat(uchar4 a, uchar4 b, uint acc) OVERLOADABLE CONST
+{
+	uint4 tmp = vc4cl_mul24(a, b, VC4CL_UNSIGNED);
+	return add_sat(acc, tmp.s0 + tmp.s1 + tmp.s2 + tmp.s3);
 }
 
 #endif /* VC4CL_EXTENSIONS_H */
