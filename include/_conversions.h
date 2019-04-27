@@ -808,13 +808,18 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtp)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
 
 /*
- * A newer version of the opencl-c.h header defines all as_<type> as macros to __builtin_astype wich generates the same LLVM IR as this custom implementation
+ * Newer versions of the opencl-c.h header defines all as_<type> as macros to __builtin_astype
+ * which generates the same LLVM IR as this custom implementation.
+ *
+ * Commit where this was introduced:
+ * https://github.com/llvm-mirror/clang/commit/f3f636b7d3fa692036026e064738c0521ce035ad
+ * -> first released in Clang 5.0 (check with: git branch -r --contains f3f636b7d3fa692036026e064738c0521ce035ad)
  */
-/*
+#if __clang_major__ < 5
 #define AS_TYPE(dstType, srcType) \
     INLINE dstType as_##dstType(srcType val) OVERLOADABLE CONST \
     { \
-        return ((union { srcType src; dstType dst; }) { .src = val}).dst; \
+        return __builtin_astype((val), dstType); \
     }
 
 AS_TYPE(uchar, uchar)
@@ -1139,7 +1144,8 @@ AS_TYPE(float8, float8)
 AS_TYPE(float16, uint16)
 AS_TYPE(float16, int16)
 AS_TYPE(float16, float16)
-*/
+#undef AS_TYPE
+#endif
 
 #undef uchar_MIN
 #undef uchar_MAX

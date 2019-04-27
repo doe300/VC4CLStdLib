@@ -230,7 +230,6 @@ VECTOR_SHUFFLE_2(short, ushort)
 VECTOR_SHUFFLE_2(uint, uint)
 VECTOR_SHUFFLE_2(int, uint)
 VECTOR_SHUFFLE_2(float, uint)
-*/
 
 VECTOR_SHUFFLE(uchar, uchar)
 VECTOR_SHUFFLE(char, uchar)
@@ -239,8 +238,9 @@ VECTOR_SHUFFLE(short, ushort)
 VECTOR_SHUFFLE(uint, uint)
 VECTOR_SHUFFLE(int, uint)
 VECTOR_SHUFFLE(float, uint)
+*/
 
-//shuffle2 is handled via intrinsifying the OpenCL function
+//shuffle/shuffle2 are handled via intrinsifying the OpenCL function
 
 #undef VECTOR_LOAD
 #undef VECTOR_STORE
