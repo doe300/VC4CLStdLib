@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-/* Taken from https://github.com/llvm-mirror/clang/blob/master/lib/Headers/opencl-c.h (tracking commit 0c08d98) */
+/* Taken and adapted from https://github.com/llvm-mirror/clang/blob/master/lib/Headers/opencl-c.h (tracking commit 0c08d98) */
 
 #ifndef _OPENCL_H_
 #define _OPENCL_H_
@@ -6586,6 +6586,9 @@ half16 __ovld __cnfn convert_half16_rtz(double16);
  * OpenCL v1.1/1.2/2.0 s6.2.4.2 - as_type operators
  * Reinterprets a data type as another data type of the same size
  */
+// For Clang 5.0+, these macros are defined in our version of opencl-c.h, but not the system/standard version.
+// This results in our redefinition to fail, but the macros still not being available for user-code compilation.
+#if __clang_major__ >= 5
 #define as_char(x) __builtin_astype((x),   char)
 #define as_char2(x) __builtin_astype((x),  char2)
 #define as_char3(x) __builtin_astype((x),  char3)
@@ -6666,6 +6669,7 @@ half16 __ovld __cnfn convert_half16_rtz(double16);
 #define as_half8(x) __builtin_astype((x),  half8)
 #define as_half16(x) __builtin_astype((x), half16)
 #endif //cl_khr_fp16
+#endif
 
 // OpenCL v1.1 s6.9, v1.2/2.0 s6.10 - Function qualifiers
 
