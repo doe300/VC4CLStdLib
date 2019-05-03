@@ -91,7 +91,7 @@ INLINE float16 smoothstep(float edge0, float edge1, float16 val) OVERLOADABLE
 	return smoothstep((float16)edge0, (float16)edge1, val);
 }
 
-SIMPLE_1(float, sign, float, val, val > 0 ? 1.0f : val < 0 ? -1.0f : 0.0f)
+SIMPLE_1(float, sign, float, val, val > 0.0f ? 1.0f : val < 0.0f ? -1.0f : 0.0f)
 
 #endif /* VC4CL_COMMON_H */
 
