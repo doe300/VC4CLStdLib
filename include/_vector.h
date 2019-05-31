@@ -17,7 +17,7 @@
 	} \
 	INLINE type##3 vload3(size_t offset, const __global type * ptr) OVERLOADABLE \
 	{ \
-		return *((const __global type##3 *)(ptr + offset * 3)); \
+		return vc4cl_vload3(ptr + offset * 3); \
 	} \
 	INLINE type##4 vload4(size_t offset, const __global type * ptr) OVERLOADABLE \
 	{ \
@@ -37,7 +37,7 @@
 	} \
 	INLINE type##3 vload3(size_t offset, const __local type * ptr) OVERLOADABLE \
 	{ \
-		return *((const __local type##3 *)(ptr + offset * 3)); \
+		return vc4cl_vload3(ptr + offset * 3); \
 	} \
 	INLINE type##4 vload4(size_t offset, const __local type * ptr) OVERLOADABLE \
 	{ \
@@ -57,7 +57,7 @@
 	} \
 	INLINE type##3 vload3(size_t offset, const __constant type * ptr) OVERLOADABLE \
 	{ \
-		return *((const __constant type##3 *)(ptr + offset * 3)); \
+		return vc4cl_vload3(ptr + offset * 3); \
 	} \
 	INLINE type##4 vload4(size_t offset, const __constant type * ptr) OVERLOADABLE \
 	{ \
@@ -77,7 +77,7 @@
 	} \
 	INLINE type##3 vload3(size_t offset, const __private type * ptr) OVERLOADABLE \
 	{ \
-		return *((const __private type##3 *)(ptr + offset * 3)); \
+		return vc4cl_vload3(ptr + offset * 3); \
 	} \
 	INLINE type##4 vload4(size_t offset, const __private type * ptr) OVERLOADABLE \
 	{ \
@@ -99,7 +99,7 @@
 	} \
 	INLINE void vstore3(type##3 data, size_t offset, __global type * ptr) OVERLOADABLE \
 	{ \
-		*((__global type##3 *)(ptr + offset * 3)) = data; \
+		vc4cl_vstore3(ptr + offset * 3, data); \
 	} \
 	INLINE void vstore4(type##4 data, size_t offset, __global type * ptr) OVERLOADABLE \
 	{ \
@@ -119,7 +119,7 @@
 	} \
 	INLINE void vstore3(type##3 data, size_t offset, __local type * ptr) OVERLOADABLE \
 	{ \
-		*((__local type##3 *)(ptr + offset * 3)) = data; \
+		vc4cl_vstore3(ptr + offset * 3, data); \
 	} \
 	INLINE void vstore4(type##4 data, size_t offset, __local type * ptr) OVERLOADABLE \
 	{ \
@@ -139,7 +139,7 @@
 	} \
 	INLINE void vstore3(type##3 data, size_t offset, __private type * ptr) OVERLOADABLE \
 	{ \
-		*((__private type##3 *)(ptr + offset * 3)) = data; \
+		vc4cl_vstore3(ptr + offset * 3, data); \
 	} \
 	INLINE void vstore4(type##4 data, size_t offset, __private type * ptr) OVERLOADABLE \
 	{ \

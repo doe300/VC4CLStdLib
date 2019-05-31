@@ -175,7 +175,57 @@ int8 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, 
 int8 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7) OVERLOADABLE;
 int16 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3, __global int* ptr4, __global int* ptr5, __global int* ptr6, __global int* ptr7, __global int* ptr8, __global int* ptr9, __global int* ptr10, __global int* ptr11, __global int* ptr12, __global int* ptr13, __global int* ptr14, __global int* ptr15) OVERLOADABLE;
 int16 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7, __local int* ptr8, __local int* ptr9, __local int* ptr10, __local int* ptr11, __local int* ptr12, __local int* ptr13, __local int* ptr14, __local int* ptr15) OVERLOADABLE;
+// special handling of 3-element load/store, since LLVM (compliant with the OpenCL standard) by default generates 4-element load/store
+char3 vc4cl_vload3(const __global char* ptr) OVERLOADABLE;
+char3 vc4cl_vload3(const __local char* ptr) OVERLOADABLE;
+char3 vc4cl_vload3(const __private char* ptr) OVERLOADABLE;
+char3 vc4cl_vload3(const __constant char* ptr) OVERLOADABLE;
+uchar3 vc4cl_vload3(const __global uchar* ptr) OVERLOADABLE;
+uchar3 vc4cl_vload3(const __local uchar* ptr) OVERLOADABLE;
+uchar3 vc4cl_vload3(const __private uchar* ptr) OVERLOADABLE;
+uchar3 vc4cl_vload3(const __constant uchar* ptr) OVERLOADABLE;
+short3 vc4cl_vload3(const __global short* ptr) OVERLOADABLE;
+short3 vc4cl_vload3(const __local short* ptr) OVERLOADABLE;
+short3 vc4cl_vload3(const __private short* ptr) OVERLOADABLE;
+short3 vc4cl_vload3(const __constant short* ptr) OVERLOADABLE;
+ushort3 vc4cl_vload3(const __global ushort* ptr) OVERLOADABLE;
+ushort3 vc4cl_vload3(const __local ushort* ptr) OVERLOADABLE;
+ushort3 vc4cl_vload3(const __private ushort* ptr) OVERLOADABLE;
+ushort3 vc4cl_vload3(const __constant ushort* ptr) OVERLOADABLE;
+int3 vc4cl_vload3(const __global int* ptr) OVERLOADABLE;
+int3 vc4cl_vload3(const __local int* ptr) OVERLOADABLE;
+int3 vc4cl_vload3(const __private int* ptr) OVERLOADABLE;
+int3 vc4cl_vload3(const __constant int* ptr) OVERLOADABLE;
+uint3 vc4cl_vload3(const __global uint* ptr) OVERLOADABLE;
+uint3 vc4cl_vload3(const __local uint* ptr) OVERLOADABLE;
+uint3 vc4cl_vload3(const __private uint* ptr) OVERLOADABLE;
+uint3 vc4cl_vload3(const __constant uint* ptr) OVERLOADABLE;
+float3 vc4cl_vload3(const __global float* ptr) OVERLOADABLE;
+float3 vc4cl_vload3(const __local float* ptr) OVERLOADABLE;
+float3 vc4cl_vload3(const __private float* ptr) OVERLOADABLE;
+float3 vc4cl_vload3(const __constant float* ptr) OVERLOADABLE;
 
+void vc4cl_vstore3(__global char* ptr, char3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local char* ptr, char3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private char* ptr, char3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global uchar* ptr, uchar3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local uchar* ptr, uchar3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private uchar* ptr, uchar3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global short* ptr, short3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local short* ptr, short3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private short* ptr, short3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global ushort* ptr, ushort3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local ushort* ptr, ushort3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private ushort* ptr, ushort3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global int* ptr, int3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local int* ptr, int3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private int* ptr, int3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global uint* ptr, uint3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local uint* ptr, uint3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private uint* ptr, uint3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global float* ptr, float3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local float* ptr, float3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private float* ptr, float3 val) OVERLOADABLE;
 /*
  * Work-item functions
  * Mapped to UNIFORM reads
@@ -273,6 +323,8 @@ int4 vc4cl_image_read(read_only image3d_t image, float4 coords, uint channel_typ
 /*
  * Type conversions
  */
+// TODO use __builtin_convertvector ?? https://clang.llvm.org/docs/LanguageExtensions.html#builtin-convertvector
+// check available on all compiler versions, generated LLVM IR code!
 //component-wise bitcasts
 OVERLOAD_1(uchar, vc4cl_bitcast_uchar, uint, val)
 OVERLOAD_1(uchar, vc4cl_bitcast_uchar, int, val)
