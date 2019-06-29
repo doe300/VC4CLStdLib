@@ -817,7 +817,8 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
  */
 #if __clang_major__ < 5
 #define AS_TYPE(dstType, srcType) \
-    INLINE dstType as_##dstType(srcType val) OVERLOADABLE CONST \
+    /* Somehow marking this as INLINE fails to generate code for these functions, do just don't */ \
+    dstType as_##dstType(srcType val) OVERLOADABLE CONST \
     { \
         return __builtin_astype((val), dstType); \
     }

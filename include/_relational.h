@@ -245,12 +245,12 @@ SELECT_SCALAR(float, int, vc4cl_extend(c) ? b : a)
 //"For each component of a vector type, result[i] = if MSB of c[i] is set ? b[i] : a[i]"
 SELECT_VECTOR(uchar, uchar,
 {
-	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 31);
 	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
 SELECT_VECTOR(uchar, char,
 {
-	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 32);
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 24, 31);
 	return vc4cl_bitcast_uchar(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
 SELECT_VECTOR(char, char,
@@ -263,12 +263,12 @@ SELECT_VECTOR(char, uchar,
 })
 SELECT_VECTOR(ushort, ushort,
 {
-	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 31);
 	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
 SELECT_VECTOR(ushort, short,
 {
-	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 32);
+	int_t mask = vc4cl_asr(vc4cl_extend(c) << 16, 31);
 	return vc4cl_bitcast_ushort(mask & vc4cl_bitcast_int(vc4cl_extend(b)) | (~mask & vc4cl_bitcast_int(vc4cl_extend(a))));
 })
 SELECT_VECTOR(short, short,
