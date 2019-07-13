@@ -112,8 +112,8 @@ SIMPLE_2(ushort, max, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_max(vc4cl
 SIMPLE_2_SCALAR(ushort, max, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_max(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
 SIMPLE_2(short, max, short, x, short, y, vc4cl_bitcast_short(vc4cl_max(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2_SCALAR(short, max, short, x, short, y, vc4cl_bitcast_short(vc4cl_max(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
-SIMPLE_2(uint, max, uint, x, uint, y, vc4cl_msb_set(x | y) != vc4cl_msb_set(x & y) ? vc4cl_min(x, y, VC4CL_UNSIGNED) : vc4cl_max(x, y, VC4CL_UNSIGNED))
-SIMPLE_2_SCALAR(uint, max, uint, x, uint, y, vc4cl_msb_set(x | y) != vc4cl_msb_set(x & y) ? vc4cl_min(x, y, VC4CL_UNSIGNED) : vc4cl_max(x, y, VC4CL_UNSIGNED))
+SIMPLE_2(uint, max, uint, x, uint, y, x > y ? x : y)
+SIMPLE_2_SCALAR(uint, max, uint, x, uint, y, x > y ? x : y)
 SIMPLE_2(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
 
@@ -125,8 +125,8 @@ SIMPLE_2(ushort, min, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_min(vc4cl
 SIMPLE_2_SCALAR(ushort, min, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_min(vc4cl_zero_extend(x), vc4cl_zero_extend(y), VC4CL_UNSIGNED)))
 SIMPLE_2(short, min, short, x, short, y, vc4cl_bitcast_short(vc4cl_min(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
 SIMPLE_2_SCALAR(short, min, short, x, short, y, vc4cl_bitcast_short(vc4cl_min(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED)))
-SIMPLE_2(uint, min, uint, x, uint, y, vc4cl_msb_set(x | y) != vc4cl_msb_set(x & y) ? vc4cl_max(x, y, VC4CL_UNSIGNED) : vc4cl_min(x, y, VC4CL_UNSIGNED))
-SIMPLE_2_SCALAR(uint, min, uint, x, uint, y, vc4cl_msb_set(x | y) != vc4cl_msb_set(x & y) ? vc4cl_max(x, y, VC4CL_UNSIGNED) : vc4cl_min(x, y, VC4CL_UNSIGNED))
+SIMPLE_2(uint, min, uint, x, uint, y, x < y ? x : y)
+SIMPLE_2_SCALAR(uint, min, uint, x, uint, y, x < y ? x : y)
 SIMPLE_2(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 
