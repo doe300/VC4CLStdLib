@@ -38,11 +38,26 @@ SIMPLE_1(uint, abs, uint, val, val)
 
 //based on pocl (pocl/lib/kernel/abs_diff.cl)
 SIMPLE_2(uchar, abs_diff, uchar, x, uchar, y, (result_t)abs(x > y ? x - y : y - x))
-SIMPLE_2(uchar, abs_diff, char, x, char, y, (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
+COMPLEX_2(uchar, abs_diff, char, x, char, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t noflow = (result_t)abs(x - y);
+	result_t flow = abs(x) + abs(y);
+	return (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ noflow : /* different signs */ flow;
+})
 SIMPLE_2(ushort, abs_diff, ushort, x, ushort, y, (result_t)abs(x > y ? x - y : y - x))
-SIMPLE_2(ushort, abs_diff, short, x, short, y, (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ (result_t)abs(x - y) : /* different signs */ abs(x) + abs(y))
+COMPLEX_2(ushort, abs_diff, short, x, short, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t noflow = (result_t)abs(x - y);
+	result_t flow = abs(x) + abs(y);
+	return (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ noflow : /* different signs */ flow;
+})
 SIMPLE_2(uint, abs_diff, uint, x, uint, y, abs(x > y ? x - y : y - x))
-SIMPLE_2(uint, abs_diff, int, x, int, y, (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ abs(x - y) : /* different signs */ abs(x) + abs(y))
+COMPLEX_2(uint, abs_diff, int, x, int, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t noflow = abs(x - y);
+	result_t flow = abs(x) + abs(y);
+	return (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ noflow : /* different signs */ flow;
+})
 
 SIMPLE_2(uchar, add_sat, uchar, x, uchar, y, vc4cl_v8adds(x, y))
 SIMPLE_2(char, add_sat, char, x, char, y, vc4cl_bitcast_char(clamp(vc4cl_extend(x) + vc4cl_extend(y), SCHAR_MIN, SCHAR_MAX)))

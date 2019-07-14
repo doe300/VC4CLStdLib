@@ -713,6 +713,7 @@ COMPLEX_1(int, ilogb, float, x, {
 //"Multiply x by 2 to the power k."
 // TODO rewrite, use bit-trickery: x * 2^k = Mx * 2^(Ex + k)
 // TODO this version is wrong for |exponents > 31|
+// TODO have a look at https://gitlab.freedesktop.org/anholt/mesa/blob/f73a16727358c943dec239725a1bf2335f611b6a/src/compiler/nir/nir_opt_algebraic.py#L800
 SIMPLE_2(
 	float, ldexp, float, x, int, k, x *(k >= 0 ? vc4cl_itof((arg1_t)(1) << k) : 1.0f / vc4cl_itof((arg1_t)(1) << -k)))
 SIMPLE_2_SCALAR(float, ldexp, float, x, int, k, x *(k >= 0 ? vc4cl_itof(1 << k) : 1.0f / vc4cl_itof(1 << -k)))
@@ -975,9 +976,19 @@ SIMPLE_1(float, logb, float, x, vc4cl_itof(ilogb(x)))
 SIMPLE_3(float, mad, float, a, float, b, float, c, (a * b) + c)
 
 //"Returns x if |x|>|y|, y if |y|>|x|, otherwise fmax(x, y)"
-SIMPLE_2(float, maxmag, float, x, float, y, fabs(x) > fabs(y) ? x : (fabs(y) > fabs(x) ? y : fmax(x, y)))
+COMPLEX_2(float, maxmag, float, x, float, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t tmp = fmax(x, y);
+	result_t other = fabs(y) > fabs(x) ? y : tmp;
+	return fabs(x) > fabs(y) ? x : other;
+})
 //"Returns x if |x|<|y|, y if |y|<|x|, otherwise fmin(x, y)"
-SIMPLE_2(float, minmag, float, x, float, y, fabs(x) < fabs(y) ? x : (fabs(y) < fabs(x) ? y : fmin(x, y)))
+COMPLEX_2(float, minmag, float, x, float, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t tmp = fmin(x, y);
+	result_t other = fabs(y) < fabs(x) ? y : tmp;
+	return fabs(x) < fabs(y) ? x : other;
+})
 
 /**
  * Expected behavior:
@@ -999,15 +1010,14 @@ SIMPLE_1(float, nan, uint, nancode, vc4cl_bitcast_float(NAN | nancode))
  * nextafter(0, y < 0) = smallest negative denormal value
  */
 COMPLEX_2(float, nextafter, float, x, float, y, {
-	// TODO correct??
 	int_t ix = vc4cl_bitcast_int(x);
 	int_t iy = vc4cl_bitcast_int(y);
-	int_t res = x == y ? iy :
-						 ix >= 0 ?		/* x > 0 */
-			(ix > iy ? ix - 1 : ix + 1) /* x > y -> x -= ulp otherwise x += ulp */
-			/* x < 0 */
-			:
-			(iy > 0 || ix > iy ? ix - 1 : ix + 1); /* x < y -> x -= ulp otherwise x += ulp */
+	/* x > y -> x -= ulp otherwise x += ulp */
+	int_t xPos = ix > iy ? ix - 1 : ix + 1;
+	/* x < y -> x -= ulp otherwise x += ulp */
+	int_t xNeg = iy > 0 || ix > iy ? ix - 1 : ix + 1;
+	int_t xNotY = ix >= 0 ? /* x > 0 */ xPos : /* x < 0 */ xNeg;
+	int_t res = x == y ? iy : xNotY;
 	return vc4cl_bitcast_float(res);
 })
 
@@ -1035,7 +1045,10 @@ COMPLEX_2(float, nextafter, float, x, float, y, {
  * pow(+-0, -Inf) =+Inf
  */
 // for pow, see also https://stackoverflow.com/questions/4518011/algorithm-for-powfloat-float
-SIMPLE_2(float, pow, float, x, float, y, y < 0.0f ? (result_t) 1.0f / powr(x, y) : powr(x, y));
+COMPLEX_2(float, pow, float, x, float, y, {
+	result_t tmp = powr(x, y);
+	return y < 0.0f ? (result_t) 1.0f / tmp : tmp;
+})
 
 /**
  * Expected behavior:
@@ -1046,6 +1059,7 @@ SIMPLE_2(float, pow, float, x, float, y, y < 0.0f ? (result_t) 1.0f / powr(x, y)
  * pown(+-0, n) = +-0 for odd n and n > 0
  * pown(+-0, n) = 0 for even n and n > 0
  */
+ // TODO is there a way to not need to calculate both versions? Or at least calculate both at once?!
 SIMPLE_2(float, pown, float, x, int, n,
 	n < 0 ? (1.0f / fast_pown(x, vc4cl_bitcast_uint(-n), 32)) : fast_pown(x, vc4cl_bitcast_uint(n), 32))
 
@@ -1182,7 +1196,6 @@ COMPLEX_1(float, rsqrt, float, x, {
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
-	// TODO see how many iterations we need
 	return u.x;
 })
 
@@ -1337,6 +1350,7 @@ COMPLEX_1(float, sinh, float, val, {
 SIMPLE_1(float, sinpi, float, val, sin(val *M_PI_F))
 
 COMPLEX_1(float, sqrt, float, val, {
+	/*
 	// comparison of 14 algorithms:
 	// https://www.codeproject.com/articles/69941/best-square-root-method-algorithm-function-precisi
 	// https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Taylor_series
@@ -1359,6 +1373,11 @@ COMPLEX_1(float, sqrt, float, val, {
 	// of 4.7*10-7 from the OpenCL standard
 
 	return val == 0.0f ? (result_t) 0.0f : x;
+	*/
+
+	// The above algorithm is too inaccurate, but the following line is accurate enough and not too expensive to calculate
+	// sqrt(x) = x / sqrt(x) = x * rsqrt(x)
+	return val == 0.0f ? (result_t) 0.0f : (val * rsqrt(val));
 })
 
 /**
@@ -1455,7 +1474,7 @@ SIMPLE_1(float, native_rsqrt, float, val, vc4cl_sfu_rsqrt(val))
 
 SIMPLE_1(float, native_sin, float, val, sin(val))
 
-SIMPLE_1(float, native_sqrt, float, val, native_recip(native_rsqrt(val)))
+SIMPLE_1(float, native_sqrt, float, val, val * native_rsqrt(val))
 
 SIMPLE_1(float, native_tan, float, val, tan(val))
 

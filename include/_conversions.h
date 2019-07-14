@@ -45,6 +45,7 @@
   /* special case for uint as source type */ \
   (uint)CC(srcType,_MAX) == (uint) UINT_MAX ? \
     /* need to remove high-bit (sign-bit) */ \
+    /* TODO this converts outer ?:-operator to if-else block */ \
     vc4cl_bitcast_int(clamp(vc4cl_bitcast_uint(vc4cl_extend(val)) > (uint##num)0x7FFFFFFF ? (int##num)0x7FFFFFFF : vc4cl_bitcast_int(vc4cl_extend(val)), (int##num)destType##_MIN, (int##num)destType##_MAX)) : \
   vc4cl_bitcast_int(clamp(vc4cl_bitcast_int(vc4cl_extend(val)), (int##num)destType##_MIN, (int##num)destType##_MAX)) \
 
@@ -109,7 +110,7 @@
 */
 #define CONVERT_FLOAT_TO_INTEGER(destType, saturation, rounding) \
         INLINE destType convert_##destType##saturation##rounding(float val) OVERLOADABLE CONST \
-        { \
+        { /* TODO This converts thefirst ?:-operator to an if-else block, but only for scalar conversion  (no vector if-else!) */ \
             int saturatedInt = val >= 2147483648.0f ? 0x7FFFFFFF : val <= -2147483648.0f ? 0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
             return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, /* scalar */, saturation, saturatedInt)); \
         } \
@@ -198,8 +199,10 @@
 #define CONVERT_UINT_TO_FLOAT(saturation, rounding) \
         INLINE float convert_float##saturation##rounding(uint val) OVERLOADABLE CONST \
         { \
-            /* For the rounding mode: find */ \
-            return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
+            /* Calculate both variants explicitly to not generate an if-else block for the more complicated ?:-operator */ \
+            float upper = vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f; \
+            float lower = vc4cl_itof(vc4cl_bitcast_int(val)); \
+            return vc4cl_msb_set(val) ? upper : lower; \
         } \
         INLINE float##2 convert_float2##saturation##rounding(uint2 val) OVERLOADABLE CONST \
         { \
