@@ -8,6 +8,7 @@
 #define VC4CL_GEOMETRY_H
 
 #include "_config.h"
+#include "_overloads.h"
 
 /*          a0   b0   a2 * b3 - a3 * b2
  * a x b =  a1 x b1 = a3 * b1 - a1 * b3

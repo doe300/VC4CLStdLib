@@ -72,7 +72,16 @@
 #undef cl_intel_packed_yuv
 #endif
 
-//unsupported extensions or optional core features
+// additional supported extensions (need to set flag here, since the module is loaded too late)
+#define cl_nv_pragma_unroll 1
+#define cl_arm_core_id 1
+#define cl_ext_atomic_counters_32 1
+#define cl_arm_integer_dot_product_int8 1
+#define cl_arm_integer_dot_product_accumulate_int8 1
+#define cl_arm_integer_dot_product_accumulate_int16 1
+#define cl_arm_integer_dot_product_accumulate_saturate_int8 1
+
+// unsupported extensions or optional core features
 #undef cl_khr_fp16
 #undef cl_khr_fp64
 #undef cl_khr_int64_base_atomics
@@ -82,7 +91,7 @@
 #undef cl_khr_gl_msaa_sharing
 #undef cl_amd_media_ops
 #undef cl_amd_media_ops2
-//unsupported host-only extensions (disable for safety)
+// unsupported host-only extensions (disable for safety)
 #undef cl_khr_gl_sharing
 #undef cl_khr_gl_event
 #undef cl_khr_d3d10_sharing
