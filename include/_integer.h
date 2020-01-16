@@ -9,7 +9,6 @@
 
 #include "_config.h"
 #include "_intrinsics.h"
-#include "_operators.h"
 #include "_flags.h"
 
 #define SIMPLE_INTEGER_2(func, argName0, argName1, content) \
@@ -145,7 +144,12 @@ SIMPLE_2_SCALAR(uint, min, uint, x, uint, y, x < y ? x : y)
 SIMPLE_2(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 
-SIMPLE_INTEGER_2(mul_hi, a, b, vc4cl_mul_hi(a, b))
+SIMPLE_2(uchar, mul_hi, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_mul24(x, y, VC4CL_UNSIGNED) >> 8))
+SIMPLE_2(char, mul_hi, char, x, char, y, vc4cl_bitcast_char(vc4cl_asr(vc4cl_mul24(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED), 8)))
+SIMPLE_2(ushort, mul_hi, ushort, x, ushort, y, vc4cl_bitcast_ushort(vc4cl_mul24(x, y, VC4CL_UNSIGNED) >> 16))
+SIMPLE_2(short, mul_hi, short, x, short, y, vc4cl_bitcast_short(vc4cl_asr(vc4cl_sign_extend(x) * vc4cl_sign_extend(y), 16)))
+SIMPLE_2(uint, mul_hi, uint, x, uint, y, vc4cl_mul_hi(x, y, VC4CL_UNSIGNED))
+SIMPLE_2(int, mul_hi, int, x, int, y, vc4cl_mul_hi(x, y, VC4CL_SIGNED))
 
 //Since the rotation is over all 32-bits, for smaller types we need to replicate the value, rotate it and truncate/sign extend the result afterwards
 SIMPLE_2(uchar, rotate, uchar, x, uchar, y, vc4cl_pack_lsb(vc4cl_ror(vc4cl_replicate_lsb(x), -vc4cl_bitcast_int(vc4cl_zero_extend(y)))))

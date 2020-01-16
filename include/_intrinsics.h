@@ -369,6 +369,9 @@ SIMPLE_1(int, vc4cl_msb_set, int, val, (val < (arg_t)0))
 OVERLOAD_1(int, vc4cl_is_nan, float, val)
 OVERLOAD_1(int, vc4cl_is_inf_nan, float, val)
 
+OVERLOAD_3_SCALAR(int, vc4cl_mul_hi, int, x, int, y, uchar, sign)
+OVERLOAD_3_SCALAR(uint, vc4cl_mul_hi, uint, x, uint, y, uchar, sign)
+
 /*
  * Vector functions
  */
