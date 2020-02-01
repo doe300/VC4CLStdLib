@@ -30,62 +30,62 @@
 		INLINE event_t async_work_group_copy(__local type * dst, const __global type * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__local type##2 * dst, const __global type##2 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__local type##3 * dst, const __global type##3 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__local type##4 * dst, const __global type##4 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__local type##8 * dst, const __global type##8 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__local type##16 * dst, const __global type##16 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type * dst, const __local type * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type##2 * dst, const __local type##2 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type##3 * dst, const __local type##3 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type##4 * dst, const __local type##4 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type##8 * dst, const __local type##8 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_copy(__global type##16 * dst, const __local type##16 * src, size_t num_elements, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		}
 
 #define ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
@@ -101,62 +101,62 @@
 		INLINE event_t async_work_group_strided_copy(__local type * dst, const __global type * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__local type##2 * dst, const __global type##2 * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__local type##3 * dst, const __global type##3 * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__local type##4 * dst, const __global type##4 * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__local type##8 * dst, const __global type##8 * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__local type##16 * dst, const __global type##16 * src, size_t num_elements, size_t src_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_SOURCE_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type * dst, const __local type * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type##2 * dst, const __local type##2 * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type##3 * dst, const __local type##3 * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type##4 * dst, const __local type##4 * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type##8 * dst, const __local type##8 * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		} \
 		INLINE event_t async_work_group_strided_copy(__global type##16 * dst, const __local type##16 * src, size_t num_elements, size_t dst_stride, event_t event) OVERLOADABLE \
 		{ \
 			ASYNC_STRIDED_DEST_COPY_INTERNAL \
-			return event; \
+			return vc4cl_set_event(event); \
 		}
 
 #define PREFETCH(type) \
