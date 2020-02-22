@@ -11,6 +11,7 @@
 #include "_overloads.h"
 #include "_intrinsics.h"
 
+#ifndef COMPARISON_1
 #define COMPARISON_1(func, content) \
 	INLINE FUNC_1(int##16, func, float##16, val) CONST \
 	{ \
@@ -29,14 +30,16 @@
 		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int##2, func, float##2, val) CONST \
-	{ /* 1 instead of -1 here on purpose! */ \
+	{ \
 		return (content) ? -1 : 0; \
 	} \
 	INLINE FUNC_1(int, func, float, val) CONST \
-	{ \
+	{ /* 1 instead of -1 here on purpose! */ \
 		return (content) ? 1 : 0; \
 	}
+#endif
 
+#ifndef COMPARISON_2
 #define COMPARISON_2(func, content) \
 	INLINE FUNC_2(int##16, func, float##16, x, float##16, y) CONST \
 	{ \
@@ -62,7 +65,9 @@
 	{ /* 1 instead of -1 here on purpose! */ \
 		return (content) ? 1 : 0; \
 	}
+#endif
 
+#ifndef FOR_ALL_ELEMENTS
 #define FOR_ALL_ELEMENTS(func, type, op, conv) \
 	INLINE FUNC_1(int, func, type##16, x) CONST \
 	{ \
@@ -114,13 +119,17 @@
 		type val = conv(x); \
 		return val != 0; \
 	}
+#endif
 
+#ifndef SELECT_SCALAR
 #define SELECT_SCALAR(type, maskType, content) \
 	INLINE FUNC_3(type, select, type, a, type, b, maskType, c) CONST \
 	{ \
 		return content; \
 	}
+#endif
 
+#ifndef SELECT_VECTOR
 #define SELECT_VECTOR(type, maskType, content) \
 	INLINE FUNC_3(type##2, select, type##2, a, type##2, b, maskType##2, c) CONST \
 	{ \
@@ -146,7 +155,8 @@
 	{ \
 		typedef int##16 int_t; \
 		content \
-	} \
+	}
+#endif
 
 /*
  * The checks for NaNs as defined in the specification are done in the intrinsic of the comparison operators:
@@ -206,7 +216,6 @@ FOR_ALL_ELEMENTS(any, short, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, uint, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, int, |, vc4cl_msb_set)
 
-//TODO all(int4) is wrong, the rotation parameter are zeroinitializers?? The bit-cast is somehow optimized away
 FOR_ALL_ELEMENTS(all, uchar, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, char, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, ushort, &, vc4cl_msb_set)

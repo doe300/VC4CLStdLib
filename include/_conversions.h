@@ -29,6 +29,10 @@
 #define int_MAX INT_MAX
 #define float_MAX (int)FLT_MAX
 #define float_MIN (int)FLT_MIN
+#define long_MAX LONG_MAX
+#define long_MIN LONG_MIN
+#define ulong_MAX ULONG_MAX
+#define ulong_MIN ULONG_MIN
 
 //some macro tricks to save us from writing 2*4*2*8 = 128 single functions
 #define _sat 1
@@ -78,6 +82,7 @@
     SATURATE_FLOAT(destType, num, val) : \
   vc4cl_bitcast_int(vc4cl_extend(val))
 
+#ifndef CONVERT_INTEGER
 #define CONVERT_INTEGER(destType, srcType, saturation, rounding) \
         INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
@@ -103,11 +108,98 @@
         { \
             return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 16, saturation, val)); \
         }
+#endif
+
+#ifndef CONVERT_LONG_TO_INTEGER
+#define CONVERT_LONG_TO_INTEGER(destType, srcType, saturation, rounding) \
+        INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, /* scalar */, saturation, vc4cl_long_to_int(val))); \
+        } \
+        INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 2, saturation, vc4cl_long_to_int(val))); \
+        } \
+        INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 3, saturation, vc4cl_long_to_int(val))); \
+        } \
+        INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 4, saturation, vc4cl_long_to_int(val))); \
+        } \
+        INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 8, saturation, vc4cl_long_to_int(val))); \
+        } \
+        INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 16, saturation, vc4cl_long_to_int(val))); \
+        }
+#endif
+
+#ifndef CONVERT_INTEGER_TO_LONG
+#define CONVERT_INTEGER_TO_LONG(destType, srcType, saturation, rounding) \
+        INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        } \
+        INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        } \
+        INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        } \
+        INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        } \
+        INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        } \
+        INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(vc4cl_int_to_long(vc4cl_extend(val))); \
+        }
+#endif
+
+#ifndef CONVERT_LONG_TO_LONG
+// TODO fix saturations
+#define CONVERT_LONG_TO_LONG(destType, srcType, saturation, rounding) \
+        INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        } \
+        INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        } \
+        INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        } \
+        INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        } \
+        INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        } \
+        INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_bitcast_##destType(val); \
+        }
+#endif
 
 /*
 * Out-of-range behavior of float-to-integer conversion is implementation specified (OpenCL 1.2, section 6.2.3.3)
 * -> we always saturate
 */
+#ifndef CONVERT_FLOAT_TO_INTEGER
 #define CONVERT_FLOAT_TO_INTEGER(destType, saturation, rounding) \
         INLINE destType convert_##destType##saturation##rounding(float val) OVERLOADABLE CONST \
         { /* TODO This converts thefirst ?:-operator to an if-else block, but only for scalar conversion  (no vector if-else!) */ \
@@ -139,7 +231,9 @@
             int16 saturatedInt = val >= 2147483648.0f ? (int16)0x7FFFFFFF : val <= -2147483648.0f ? (int16)0x80000000 : vc4cl_ftoi(ROUND_TO_INTEGER(rounding, val)); \
             return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, int, 16, saturation, saturatedInt)); \
         }
+#endif
 
+#ifndef CONVERT_INTEGER_TO_FLOAT
 #define CONVERT_INTEGER_TO_FLOAT(srcType, saturation, rounding) \
         INLINE float convert_float##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
@@ -165,7 +259,9 @@
         { \
             return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 16, saturation, val)); \
         }
+#endif
 
+#ifndef CONVERT_FLOAT_TO_FLOAT
 #define CONVERT_FLOAT_TO_FLOAT(saturation, rounding) \
         INLINE float convert_float##saturation##rounding(float val) OVERLOADABLE CONST \
         { \
@@ -191,11 +287,13 @@
         { \
             return ROUND_TO_INTEGER(rounding, val); \
         }
+#endif
 
 /*
  * Need special handling for values > INT_MAX, since itof() is signed
  */
 //XXX could be wrong in very rare cases if "original" conversion would round differently due to cut off last bit
+#ifndef CONVERT_UINT_TO_FLOAT
 #define CONVERT_UINT_TO_FLOAT(saturation, rounding) \
         INLINE float convert_float##saturation##rounding(uint val) OVERLOADABLE CONST \
         { \
@@ -224,12 +322,14 @@
         { \
             return vc4cl_msb_set(val) ? vc4cl_itof(vc4cl_bitcast_int(val >> 1)) * 2.0f : vc4cl_itof(vc4cl_bitcast_int(val)); \
         }
+#endif
 
 /*
  * Out-of-range behavior of float-to-integer conversion is implementation specified (OpenCL 1.2, section 6.2.3.3)
  * -> we always saturate
  */
 //TODO depending on what the VC4 does with out-of-range floating-point values, this could be optimized
+#ifndef CONVERT_FLOAT_TO_UINT
 #define CONVERT_FLOAT_TO_UINT(saturation, rounding) \
         INLINE uint convert_uint##saturation##rounding(float val) OVERLOADABLE CONST \
         { \
@@ -291,6 +391,7 @@
                   vc4cl_bitcast_uint(vc4cl_ftoi(val * 0.5f)) << 1 : \
             vc4cl_bitcast_uint(vc4cl_ftoi(val)); \
         }
+#endif
 
 /*
  * To uchar
@@ -365,6 +466,26 @@ CONVERT_FLOAT_TO_INTEGER(uchar, _sat, _rte)
 CONVERT_FLOAT_TO_INTEGER(uchar, _sat, _rtz)
 CONVERT_FLOAT_TO_INTEGER(uchar, _sat, _rtp)
 CONVERT_FLOAT_TO_INTEGER(uchar, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(uchar, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(uchar, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uchar, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(uchar, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(uchar, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(uchar, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(uchar, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uchar, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(uchar, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(uchar, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(uchar, long, _sat, _rtn)
 
 /*
  * To char
@@ -439,6 +560,26 @@ CONVERT_FLOAT_TO_INTEGER(char, _sat, _rte)
 CONVERT_FLOAT_TO_INTEGER(char, _sat, _rtz)
 CONVERT_FLOAT_TO_INTEGER(char, _sat, _rtp)
 CONVERT_FLOAT_TO_INTEGER(char, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(char, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(char, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(char, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(char, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(char, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(char, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(char, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(char, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(char, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(char, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(char, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(char, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(char, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(char, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(char, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(char, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(char, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(char, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(char, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(char, long, _sat, _rtn)
 
 /*
  * To ushort
@@ -513,6 +654,26 @@ CONVERT_FLOAT_TO_INTEGER(ushort, _sat, _rte)
 CONVERT_FLOAT_TO_INTEGER(ushort, _sat, _rtz)
 CONVERT_FLOAT_TO_INTEGER(ushort, _sat, _rtp)
 CONVERT_FLOAT_TO_INTEGER(ushort, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(ushort, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(ushort, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(ushort, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(ushort, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(ushort, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(ushort, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(ushort, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(ushort, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(ushort, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(ushort, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(ushort, long, _sat, _rtn)
 
 /*
  * To short
@@ -587,6 +748,26 @@ CONVERT_FLOAT_TO_INTEGER(short, _sat, _rte)
 CONVERT_FLOAT_TO_INTEGER(short, _sat, _rtz)
 CONVERT_FLOAT_TO_INTEGER(short, _sat, _rtp)
 CONVERT_FLOAT_TO_INTEGER(short, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(short, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(short, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(short, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(short, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(short, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(short, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(short, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(short, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(short, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(short, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(short, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(short, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(short, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(short, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(short, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(short, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(short, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(short, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(short, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(short, long, _sat, _rtn)
 
 /*
  * To uint
@@ -661,6 +842,26 @@ CONVERT_FLOAT_TO_UINT(_sat, _rte)
 CONVERT_FLOAT_TO_UINT(_sat, _rtz)
 CONVERT_FLOAT_TO_UINT(_sat, _rtp)
 CONVERT_FLOAT_TO_UINT(_sat, _rtn)
+CONVERT_LONG_TO_INTEGER(uint, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uint, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(uint, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(uint, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(uint, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(uint, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uint, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(uint, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(uint, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(uint, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(uint, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uint, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(uint, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(uint, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(uint, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(uint, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(uint, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(uint, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(uint, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(uint, long, _sat, _rtn)
 
 /*
  * To int
@@ -735,6 +936,26 @@ CONVERT_FLOAT_TO_INTEGER(int, _sat, _rte)
 CONVERT_FLOAT_TO_INTEGER(int, _sat, _rtz)
 CONVERT_FLOAT_TO_INTEGER(int, _sat, _rtp)
 CONVERT_FLOAT_TO_INTEGER(int, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(int, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(int, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(int, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(int, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(int, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(int, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(int, ulong, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(int, ulong, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(int, ulong, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(int, ulong, _sat, _rtn)
+CONVERT_LONG_TO_INTEGER(int, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(int, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_INTEGER(int, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_INTEGER(int, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_INTEGER(int, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_INTEGER(int, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_INTEGER(int, long, _sat, _rte)
+CONVERT_LONG_TO_INTEGER(int, long, _sat, _rtz)
+CONVERT_LONG_TO_INTEGER(int, long, _sat, _rtp)
+CONVERT_LONG_TO_INTEGER(int, long, _sat, _rtn)
 
 /*
  * To float
@@ -811,6 +1032,176 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtp)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
 
 /*
+ * To ulong
+ */
+CONVERT_INTEGER_TO_LONG(ulong, uchar, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, uchar, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, char, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, char, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, char, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, char, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, char, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, char, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, char, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, char, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, char, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, char, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, ushort, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, short, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, short, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, short, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, short, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, short, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, short, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, short, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, short, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, short, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, short, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, uint, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, uint, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, uint, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, uint, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, uint, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, uint, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, uint, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, uint, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, uint, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, uint, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, int, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, int, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, int, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, int, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, int, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(ulong, int, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(ulong, int, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(ulong, int, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(ulong, int, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(ulong, int, _sat, _rtn)
+// TODO float to (u)long
+CONVERT_LONG_TO_LONG(ulong, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_LONG(ulong, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_LONG(ulong, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_LONG(ulong, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_LONG(ulong, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_LONG(ulong, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_LONG(ulong, ulong, _sat, _rte)
+CONVERT_LONG_TO_LONG(ulong, ulong, _sat, _rtz)
+CONVERT_LONG_TO_LONG(ulong, ulong, _sat, _rtp)
+CONVERT_LONG_TO_LONG(ulong, ulong, _sat, _rtn)
+CONVERT_LONG_TO_LONG(ulong, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_LONG(ulong, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_LONG(ulong, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_LONG(ulong, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_LONG(ulong, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_LONG(ulong, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_LONG(ulong, long, _sat, _rte)
+CONVERT_LONG_TO_LONG(ulong, long, _sat, _rtz)
+CONVERT_LONG_TO_LONG(ulong, long, _sat, _rtp)
+CONVERT_LONG_TO_LONG(ulong, long, _sat, _rtn)
+
+/*
+ * To long
+ */
+CONVERT_INTEGER_TO_LONG(long, uchar, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, uchar, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, uchar, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, uchar, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, uchar, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, uchar, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, uchar, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, uchar, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, uchar, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, uchar, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(long, char, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, char, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, char, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, char, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, char, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, char, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, char, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, char, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, char, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, char, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(long, ushort, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, ushort, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, ushort, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, ushort, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, ushort, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, ushort, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, ushort, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, ushort, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, ushort, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, ushort, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(long, short, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, short, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, short, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, short, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, short, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, short, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, short, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, short, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, short, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, short, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(long, uint, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, uint, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, uint, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, uint, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, uint, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, uint, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, uint, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, uint, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, uint, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, uint, _sat, _rtn)
+CONVERT_INTEGER_TO_LONG(long, int, /* no saturation*/, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, int, /* no saturation*/, _rte)
+CONVERT_INTEGER_TO_LONG(long, int, /* no saturation*/, _rtz)
+CONVERT_INTEGER_TO_LONG(long, int, /* no saturation*/, _rtp)
+CONVERT_INTEGER_TO_LONG(long, int, /* no saturation*/, _rtn)
+CONVERT_INTEGER_TO_LONG(long, int, _sat, /* no rounding */)
+CONVERT_INTEGER_TO_LONG(long, int, _sat, _rte)
+CONVERT_INTEGER_TO_LONG(long, int, _sat, _rtz)
+CONVERT_INTEGER_TO_LONG(long, int, _sat, _rtp)
+CONVERT_INTEGER_TO_LONG(long, int, _sat, _rtn)
+// TODO float to (u)long
+CONVERT_LONG_TO_LONG(long, ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_LONG(long, ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_LONG(long, ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_LONG(long, ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_LONG(long, ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_LONG(long, ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_LONG(long, ulong, _sat, _rte)
+CONVERT_LONG_TO_LONG(long, ulong, _sat, _rtz)
+CONVERT_LONG_TO_LONG(long, ulong, _sat, _rtp)
+CONVERT_LONG_TO_LONG(long, ulong, _sat, _rtn)
+CONVERT_LONG_TO_LONG(long, long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_LONG(long, long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_LONG(long, long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_LONG(long, long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_LONG(long, long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_LONG(long, long, _sat, /* no rounding */)
+CONVERT_LONG_TO_LONG(long, long, _sat, _rte)
+CONVERT_LONG_TO_LONG(long, long, _sat, _rtz)
+CONVERT_LONG_TO_LONG(long, long, _sat, _rtp)
+CONVERT_LONG_TO_LONG(long, long, _sat, _rtn)
+
+/*
  * Newer versions of the opencl-c.h header defines all as_<type> as macros to __builtin_astype
  * which generates the same LLVM IR as this custom implementation.
  *
@@ -819,12 +1210,14 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
  * -> first released in Clang 5.0 (check with: git branch -r --contains f3f636b7d3fa692036026e064738c0521ce035ad)
  */
 #if __clang_major__ < 5
+#ifndef AS_TYPE
 #define AS_TYPE(dstType, srcType) \
-    /* Somehow marking this as INLINE fails to generate code for these functions, do just don't */ \
+    /* Somehow marking this as INLINE fails to generate code for these functions, so just don't */ \
     dstType as_##dstType(srcType val) OVERLOADABLE CONST \
     { \
         return __builtin_astype((val), dstType); \
     }
+#endif
 
 AS_TYPE(uchar, uchar)
 AS_TYPE(uchar, char)
@@ -1148,6 +1541,90 @@ AS_TYPE(float8, float8)
 AS_TYPE(float16, uint16)
 AS_TYPE(float16, int16)
 AS_TYPE(float16, float16)
+
+AS_TYPE(ulong, uchar8)
+AS_TYPE(ulong, char8)
+AS_TYPE(ulong, ushort3)
+AS_TYPE(ulong, short3)
+AS_TYPE(ulong, ushort3)
+AS_TYPE(ulong, short3)
+AS_TYPE(ulong, uint2)
+AS_TYPE(ulong, int2)
+AS_TYPE(ulong, float2)
+AS_TYPE(ulong, ulong)
+AS_TYPE(ulong, long)
+AS_TYPE(ulong2, uchar16)
+AS_TYPE(ulong2, char16)
+AS_TYPE(ulong2, ushort8)
+AS_TYPE(ulong2, short8)
+AS_TYPE(ulong2, uuint4)
+AS_TYPE(ulong2, int4)
+AS_TYPE(ulong2, float4)
+AS_TYPE(ulong2, ulong2)
+AS_TYPE(ulong2, long2)
+AS_TYPE(ulong3, ushort16)
+AS_TYPE(ulong3, short16)
+AS_TYPE(ulong3, uint8)
+AS_TYPE(ulong3, int8)
+AS_TYPE(ulong3, float8)
+AS_TYPE(ulong3, ulong3)
+AS_TYPE(ulong3, long3)
+AS_TYPE(ulong4, uint8)
+AS_TYPE(ulong4, int8)
+AS_TYPE(ulong4, float8)
+AS_TYPE(ulong4, ulong3)
+AS_TYPE(ulong4, long3)
+AS_TYPE(ulong4, ulong4)
+AS_TYPE(ulong4, long4)
+AS_TYPE(ulong8, uint16)
+AS_TYPE(ulong8, int16)
+AS_TYPE(ulong8, float16)
+AS_TYPE(ulong8, ulong8)
+AS_TYPE(ulong8, long8)
+AS_TYPE(ulong16, ulong16)
+AS_TYPE(ulong16, long16)
+
+AS_TYPE(long, uchar8)
+AS_TYPE(long, char8)
+AS_TYPE(long, ushort3)
+AS_TYPE(long, short3)
+AS_TYPE(long, ushort3)
+AS_TYPE(long, short3)
+AS_TYPE(long, uint2)
+AS_TYPE(long, int2)
+AS_TYPE(long, float2)
+AS_TYPE(long, ulong)
+AS_TYPE(long, long)
+AS_TYPE(long2, uchar16)
+AS_TYPE(long2, char16)
+AS_TYPE(long2, ushort8)
+AS_TYPE(long2, short8)
+AS_TYPE(long2, uuint4)
+AS_TYPE(long2, int4)
+AS_TYPE(long2, float4)
+AS_TYPE(long2, ulong2)
+AS_TYPE(long2, long2)
+AS_TYPE(long3, ushort16)
+AS_TYPE(long3, short16)
+AS_TYPE(long3, uint8)
+AS_TYPE(long3, int8)
+AS_TYPE(long3, float8)
+AS_TYPE(long3, ulong3)
+AS_TYPE(long3, long3)
+AS_TYPE(long4, uint8)
+AS_TYPE(long4, int8)
+AS_TYPE(long4, float8)
+AS_TYPE(long4, ulong3)
+AS_TYPE(long4, long3)
+AS_TYPE(long4, ulong4)
+AS_TYPE(long4, long4)
+AS_TYPE(long8, uint16)
+AS_TYPE(long8, int16)
+AS_TYPE(long8, float16)
+AS_TYPE(long8, ulong8)
+AS_TYPE(long8, long8)
+AS_TYPE(long16, ulong16)
+AS_TYPE(long16, long16)
 #undef AS_TYPE
 #endif
 
@@ -1165,6 +1642,10 @@ AS_TYPE(float16, float16)
 #undef int_MAX
 #undef float_MAX
 #undef float_MIN
+#undef ulong_MIN
+#undef ulong_MAX
+#undef long_MIN
+#undef long_MAX
 
 #undef _sat
 #undef _rte
@@ -1177,6 +1658,9 @@ AS_TYPE(float16, float16)
 #undef CONVERSION_WITH_SATURATION
 #undef CONVERSION_WITH_SATURATION_FLOAT
 #undef CONVERT_INTEGER
+#undef CONVERT_LONG_TO_INTEGER
+#undef CONVERT_INTEGER_TO_LONG
+#undef CONVERT_LONG_TO_LONG
 #undef CONVERT_FLOAT_TO_INTEGER
 #undef CONVERT_INTEGER_TO_FLOAT
 #undef CONVERT_FLOAT_TO_FLOAT

@@ -10,6 +10,7 @@
 #include "_config.h"
 #include "_overloads.h"
 
+#ifndef VECTOR_LOAD
 #define VECTOR_LOAD(type) \
 	INLINE type##2 vload2(size_t offset, const __global type * ptr) OVERLOADABLE \
 	{ \
@@ -91,7 +92,9 @@
 	{ \
 		return *((const __private type##16 *)(ptr + offset * 16)); \
 	}
+#endif
 
+#ifndef VECTOR_STORE
 #define VECTOR_STORE(type) \
 	INLINE void vstore2(type##2 data, size_t offset, __global type * ptr) OVERLOADABLE \
 	{ \
@@ -153,7 +156,9 @@
 	{ \
 		*((__private type##16 *)(ptr + offset * 16)) = data; \
 	}
+#endif
 
+#ifndef VECTOR_SHUFFLE_2
 #define VECTOR_SHUFFLE_2_INTERNAL(type, maskType, num) \
 	INLINE type##2 shuffle2(type##num x, type##num y, maskType##2 mask) OVERLOADABLE \
 	{ \
@@ -177,7 +182,9 @@
 	VECTOR_SHUFFLE_2_INTERNAL(type, maskType, 4) \
 	VECTOR_SHUFFLE_2_INTERNAL(type, maskType, 8) \
 	VECTOR_SHUFFLE_2_INTERNAL(type, maskType, 16)
+#endif
 
+#ifndef VECTOR_SHUFFLE
 #define VECTOR_SHUFFLE_INTERNAL(type, maskType, num) \
 	INLINE type##2 shuffle(type##num val, maskType##2 mask) OVERLOADABLE \
 	{ \
@@ -201,6 +208,7 @@
 	VECTOR_SHUFFLE_INTERNAL(type, maskType, 4) \
 	VECTOR_SHUFFLE_INTERNAL(type, maskType, 8) \
 	VECTOR_SHUFFLE_INTERNAL(type, maskType, 16)
+#endif
 
 VECTOR_LOAD(uchar)
 VECTOR_LOAD(char)
@@ -209,6 +217,8 @@ VECTOR_LOAD(short)
 VECTOR_LOAD(uint)
 VECTOR_LOAD(int)
 VECTOR_LOAD(float)
+VECTOR_LOAD(ulong)
+VECTOR_LOAD(long)
 
 VECTOR_STORE(uchar)
 VECTOR_STORE(char)
@@ -217,6 +227,8 @@ VECTOR_STORE(short)
 VECTOR_STORE(uint)
 VECTOR_STORE(int)
 VECTOR_STORE(float)
+VECTOR_STORE(ulong)
+VECTOR_STORE(long)
 
 //TODO vload(a)_half, vload(a)_halfn (+rounding) (load half and return converted to float, possible with unpack-modes)
 //TODO vstore(a)_half, vstore(a)_halfn (+rounding) (store float as half in memory, possible with pack modes)

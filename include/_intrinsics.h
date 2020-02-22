@@ -202,6 +202,14 @@ float3 vc4cl_vload3(const __global float* ptr) OVERLOADABLE;
 float3 vc4cl_vload3(const __local float* ptr) OVERLOADABLE;
 float3 vc4cl_vload3(const __private float* ptr) OVERLOADABLE;
 float3 vc4cl_vload3(const __constant float* ptr) OVERLOADABLE;
+long3 vc4cl_vload3(const __global long* ptr) OVERLOADABLE;
+long3 vc4cl_vload3(const __local long* ptr) OVERLOADABLE;
+long3 vc4cl_vload3(const __private long* ptr) OVERLOADABLE;
+long3 vc4cl_vload3(const __constant long* ptr) OVERLOADABLE;
+ulong3 vc4cl_vload3(const __global ulong* ptr) OVERLOADABLE;
+ulong3 vc4cl_vload3(const __local ulong* ptr) OVERLOADABLE;
+ulong3 vc4cl_vload3(const __private ulong* ptr) OVERLOADABLE;
+ulong3 vc4cl_vload3(const __constant ulong* ptr) OVERLOADABLE;
 
 void vc4cl_vstore3(__global char* ptr, char3 val) OVERLOADABLE;
 void vc4cl_vstore3(__local char* ptr, char3 val) OVERLOADABLE;
@@ -224,6 +232,12 @@ void vc4cl_vstore3(__private uint* ptr, uint3 val) OVERLOADABLE;
 void vc4cl_vstore3(__global float* ptr, float3 val) OVERLOADABLE;
 void vc4cl_vstore3(__local float* ptr, float3 val) OVERLOADABLE;
 void vc4cl_vstore3(__private float* ptr, float3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global long* ptr, long3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local long* ptr, long3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private long* ptr, long3 val) OVERLOADABLE;
+void vc4cl_vstore3(__global ulong* ptr, ulong3 val) OVERLOADABLE;
+void vc4cl_vstore3(__local ulong* ptr, ulong3 val) OVERLOADABLE;
+void vc4cl_vstore3(__private ulong* ptr, ulong3 val) OVERLOADABLE;
 /*
  * Work-item functions
  * Mapped to UNIFORM reads
@@ -355,6 +369,15 @@ SIMPLE_1(uint, vc4cl_extend, ushort, val, vc4cl_zero_extend(val))
 SIMPLE_1(int, vc4cl_extend, short, val, vc4cl_sign_extend(val))
 SIMPLE_1(uint, vc4cl_extend, uint, val, val)
 SIMPLE_1(int, vc4cl_extend, int, val, val)
+
+OVERLOAD_1(ulong, vc4cl_bitcast_ulong, long, val)
+OVERLOAD_1(ulong, vc4cl_bitcast_ulong, ulong, val)
+OVERLOAD_1(long, vc4cl_bitcast_long, ulong, val)
+OVERLOAD_1(long, vc4cl_bitcast_long, long, val)
+OVERLOAD_1(uint, vc4cl_long_to_int, ulong, val)
+OVERLOAD_1(int, vc4cl_long_to_int, long, val)
+OVERLOAD_1(ulong, vc4cl_int_to_long, uint, val)
+OVERLOAD_1(long, vc4cl_int_to_long, int, val)
 
 /*
  * Other functions
