@@ -376,7 +376,9 @@ OVERLOAD_1(long, vc4cl_bitcast_long, ulong, val)
 OVERLOAD_1(long, vc4cl_bitcast_long, long, val)
 OVERLOAD_1(uint, vc4cl_long_to_int, ulong, val)
 OVERLOAD_1(int, vc4cl_long_to_int, long, val)
-OVERLOAD_1(ulong, vc4cl_int_to_long, uint, val)
+OVERLOAD_1(ulong, vc4cl_int_to_ulong, uint, val)
+OVERLOAD_1(ulong, vc4cl_int_to_ulong, int, val)
+OVERLOAD_1(long, vc4cl_int_to_long, uint, val)
 OVERLOAD_1(long, vc4cl_int_to_long, int, val)
 
 /*
