@@ -16127,8 +16127,12 @@ void        __ovld __conv intel_sub_group_block_write_us8( __global ushort* p, u
 #endif // cl_intel_subgroups_short
 
 #ifdef cl_intel_device_side_avc_motion_estimation
+#if __clang_major__ >= 4
+// All the "begin" and "end" pragmas are only supported from Clang >= 4, give warning on older clang
+// They were introduced in https://reviews.llvm.org/D21698 to be able to show better error if function
+// is not available due to extension being disabled.
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : begin
-
+#endif
 // MCE built-in functions
 uchar __ovld
 intel_sub_group_avc_mce_get_default_inter_base_multi_reference_penalty(
@@ -16622,7 +16626,9 @@ intel_sub_group_avc_sic_convert_to_mce_result(
 intel_sub_group_avc_sic_result_t __ovld
 intel_sub_group_avc_mce_convert_to_sic_result(
     intel_sub_group_avc_mce_result_t result);
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : end
+#endif
 #endif // cl_intel_device_side_avc_motion_estimation
 
 #ifdef cl_amd_media_ops
@@ -16816,31 +16822,47 @@ uint16 __ovld amd_sadw(uint16 src0, uint16 src1, uint16 src2);
 #endif // cl_amd_media_ops2
 
 #if defined(cl_arm_integer_dot_product_int8)
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : begin
+#endif
 uint __ovld arm_dot(uchar4 a, uchar4 b);
 int __ovld arm_dot(char4 a, char4 b);
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_int8 : end
+#endif
 #endif // defined(cl_arm_integer_dot_product_int8)
 
 #if defined(cl_arm_integer_dot_product_accumulate_int8)
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : begin
+#endif
 uint __ovld arm_dot_acc(uchar4 a, uchar4 b, uint c);
 int __ovld arm_dot_acc(char4 a, char4 b, int c);
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int8 : end
+#endif
 #endif // defined(cl_arm_integer_dot_product_accumulate_int8)
 
 #if defined(cl_arm_integer_dot_product_accumulate_int16)
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : begin
+#endif
 uint __ovld arm_dot_acc(ushort2 a, ushort2 b, uint c);
 int __ovld arm_dot_acc(short2 a, short2 b, int c);
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_int16 : end
+#endif
 #endif // defined(cl_arm_integer_dot_product_accumulate_int16)
 
 #if defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : begin
+#endif
 uint __ovld arm_dot_acc_sat(uchar4 a, uchar4 b, uint c);
 int __ovld arm_dot_acc_sat(char4 a, char4 b, int c);
+#if __clang_major__ >= 4
 #pragma OPENCL EXTENSION cl_arm_integer_dot_product_accumulate_saturate_int8 : end
+#endif
 #endif // defined(cl_arm_integer_dot_product_accumulate_saturate_int8)
 
 // Disable any extensions we may have enabled previously.
