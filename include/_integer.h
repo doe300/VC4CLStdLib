@@ -130,6 +130,20 @@ SIMPLE_2(uint, max, uint, x, uint, y, x > y ? x : y)
 SIMPLE_2_SCALAR(uint, max, uint, x, uint, y, x > y ? x : y)
 SIMPLE_2(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, max, int, x, int, y, vc4cl_max(x, y, VC4CL_SIGNED))
+COMPLEX_2(ulong, max, ulong, x, ulong, y,
+{
+	uint_t upX = vc4cl_long_to_int(x >> 32);
+	uint_t upY = vc4cl_long_to_int(y >> 32);
+	uint_t lowX = vc4cl_long_to_int(x);
+	uint_t lowY = vc4cl_long_to_int(y);
+
+	/* can't directly use this condition in return value, since for ?: operator, the condition and return value needs to have the same type */
+	int_t selection = upX > upY ? 0 : (upX < upY ? 1 : (lowX > lowY ? 0 : 1));
+	return vc4cl_int_to_ulong(selection) == 0 ? x : y;
+})
+SIMPLE_2_SCALAR(ulong, max, ulong, x, ulong, y, max(x, (arg0_t) y))
+SIMPLE_2(long, max, long, x, long, y, vc4cl_max(x, y, VC4CL_SIGNED))
+SIMPLE_2_SCALAR(long, max, long, x, long, y, vc4cl_max(x, y, VC4CL_SIGNED))
 
 SIMPLE_2(uchar, min, uchar, x, uchar, y, vc4cl_v8min(x, y))
 SIMPLE_2_SCALAR(uchar, min, uchar, x, uchar, y, vc4cl_v8min(x, y))
@@ -143,6 +157,20 @@ SIMPLE_2(uint, min, uint, x, uint, y, x < y ? x : y)
 SIMPLE_2_SCALAR(uint, min, uint, x, uint, y, x < y ? x : y)
 SIMPLE_2(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
 SIMPLE_2_SCALAR(int, min, int, x, int, y, vc4cl_min(x, y, VC4CL_SIGNED))
+COMPLEX_2(ulong, min, ulong, x, ulong, y,
+{
+	uint_t upX = vc4cl_long_to_int(x >> 32);
+	uint_t upY = vc4cl_long_to_int(y >> 32);
+	uint_t lowX = vc4cl_long_to_int(x);
+	uint_t lowY = vc4cl_long_to_int(y);
+
+	/* can't directly use this condition in return value, since for ?: operator, the condition and return value needs to have the same type */
+	int_t selection = upX < upY ? 0 : (upX > upY ? 1 : (lowX < lowY ? 0 : 1));
+	return vc4cl_int_to_ulong(selection) == 0 ? x : y;
+})
+SIMPLE_2_SCALAR(ulong, min, ulong, x, ulong, y, min(x, (arg0_t) y))
+SIMPLE_2(long, min, long, x, long, y, vc4cl_min(x, y, VC4CL_SIGNED))
+SIMPLE_2_SCALAR(long, min, long, x, long, y, vc4cl_min(x, y, VC4CL_SIGNED))
 
 SIMPLE_2(uchar, mul_hi, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_mul24(x, y, VC4CL_UNSIGNED) >> 8))
 SIMPLE_2(char, mul_hi, char, x, char, y, vc4cl_bitcast_char(vc4cl_asr(vc4cl_mul24(vc4cl_sign_extend(x), vc4cl_sign_extend(y), VC4CL_SIGNED), 8)))
@@ -172,6 +200,8 @@ SIMPLE_2(short, upsample, char, hi, uchar, lo, vc4cl_bitcast_short((vc4cl_sign_e
 SIMPLE_2(ushort, upsample, uchar, hi, uchar, lo, vc4cl_bitcast_ushort((vc4cl_zero_extend(hi) << 8) | vc4cl_zero_extend(lo)))
 SIMPLE_2(int, upsample, short, hi, ushort, lo, (vc4cl_sign_extend(hi) << 16) | vc4cl_bitcast_int(vc4cl_zero_extend(lo)))
 SIMPLE_2(uint, upsample, ushort, hi, ushort, lo, (vc4cl_zero_extend(hi) << 16) | vc4cl_zero_extend(lo))
+SIMPLE_2(long, upsample, int, hi, uint, lo, (vc4cl_int_to_long(hi) << 32) | vc4cl_bitcast_long(vc4cl_int_to_ulong(lo)))
+SIMPLE_2(ulong, upsample, uint, hi, uint, lo, (vc4cl_int_to_ulong(hi) << 32) | vc4cl_int_to_ulong(lo))
 
 //" Returns the number of non-zero bits in x. "
 SIMPLE_1(uint, _popcountByte, uint, val, vc4cl_extend(((val & 0x80) >> 7) + ((val & 0x40) >> 6) + ((val & 0x20) >> 5) + ((val & 0x10) >> 4) + ((val & 0x8) >> 3) + ((val & 0x4) >> 2) + ((val & 0x2) >> 1) + (val & 0x1)))
@@ -182,6 +212,8 @@ SIMPLE_1(ushort, popcount, ushort, val, vc4cl_bitcast_ushort(_popcountByte(vc4cl
 SIMPLE_1(short, popcount, short, val,  vc4cl_bitcast_short(_popcountByte(vc4cl_extend(val & (arg_t) 0xFF)) + _popcountByte(vc4cl_extend((val >> 8) & (arg_t) 0xFF))))
 SIMPLE_1(uint, popcount, uint, val, _popcountByte(val & (arg_t) 0xFF) + _popcountByte((val >> 8) & (arg_t) 0xFF) + _popcountByte((val >> 16) & (arg_t) 0xFF) + _popcountByte((val >> 24) & (arg_t) 0xFF))
 SIMPLE_1(int, popcount, int, val, _popcountByte(val & (arg_t) 0xFF) + _popcountByte((val >> 8) & (arg_t) 0xFF) + _popcountByte((val >> 16) & (arg_t) 0xFF) + _popcountByte((val >> 24) & (arg_t) 0xFF))
+SIMPLE_1(ulong, popcount, ulong, val, vc4cl_int_to_ulong(popcount(vc4cl_long_to_int(val)) + popcount(vc4cl_long_to_int(val >> 32))))
+SIMPLE_1(long, popcount, long, val, vc4cl_int_to_long(popcount(vc4cl_long_to_int(val)) + popcount(vc4cl_long_to_int(val >> 32))))
 
 SIMPLE_2(uchar, mul24, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_mul24(x, y, VC4CL_UNSIGNED)))
 SIMPLE_2(char, mul24, char, x, char, y, vc4cl_bitcast_char(vc4cl_mul24(x, y, VC4CL_SIGNED)))
