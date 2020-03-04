@@ -92,6 +92,10 @@ SIMPLE_3_TWO_SCALAR(ushort, clamp, ushort, val, ushort, minval, ushort, maxval, 
 SIMPLE_3_TWO_SCALAR(short, clamp, short, val, short, minval, short, maxval, min(max(val, minval), maxval))
 SIMPLE_3_TWO_SCALAR(uint, clamp, uint, val, uint, minval, uint, maxval, min(max(val, minval), maxval))
 SIMPLE_3_TWO_SCALAR(int, clamp, int, val, int, minval, int, maxval, min(max(val, minval), maxval))
+SIMPLE_3(ulong, clamp, ulong, val, ulong, minval, ulong, maxval, min(max(val, minval), maxval))
+SIMPLE_3_TWO_SCALAR(ulong, clamp, ulong, val, ulong, minval, ulong, maxval, min(max(val, minval), maxval))
+SIMPLE_3(long, clamp, long, val, long, minval, long, maxval, min(max(val, minval), maxval))
+SIMPLE_3_TWO_SCALAR(long, clamp, long, val, long, minval, long, maxval, min(max(val, minval), maxval))
 
 SIMPLE_1(uchar, clz, uchar, x, vc4cl_bitcast_uchar(vc4cl_clz((vc4cl_and(x, (arg_t)0xFF) << 24) | 0xFFFFFF)))
 SIMPLE_1(char, clz, char, x, vc4cl_bitcast_char(vc4cl_clz((vc4cl_and(x, (arg_t)0xFF) << 24) | 0xFFFFFF)))
@@ -106,17 +110,8 @@ SIMPLE_3(uchar, mad_sat, uchar, x, uchar, y, uchar, z, vc4cl_bitcast_uchar(clamp
 SIMPLE_3(char, mad_sat, char, x, char, y, char, z, vc4cl_bitcast_char(clamp(vc4cl_extend(x) * vc4cl_extend(y) + vc4cl_extend(z), (int) CHAR_MIN, (int) CHAR_MAX)))
 SIMPLE_3(ushort, mad_sat, ushort, x, ushort, y, ushort, z, vc4cl_bitcast_ushort(clamp(vc4cl_extend(x) * vc4cl_extend(y) + vc4cl_extend(z), (uint) 0, (uint) USHRT_MAX)))
 SIMPLE_3(short, mad_sat, short, x, short, y, short, z, vc4cl_bitcast_short(clamp(vc4cl_extend(x) * vc4cl_extend(y) + vc4cl_extend(z), (int) SHRT_MIN, (int) SHRT_MAX)))
-COMPLEX_3(uint, mad_sat, uint, x, uint, y, uint, z,
-{
-	result_t a = x * y;
-	return UINT_MAX - a < z ? (result_t)UINT_MAX : a + z;
-})
-COMPLEX_3(int, mad_sat, int, x, int, y, int, z,
-{
-	//TODO need to saturate multiplication too
-	result_t a = x * y;
-	return vc4cl_saturated_add(a, z);
-})
+SIMPLE_3(uint, mad_sat, uint, x, uint, y, uint, z, vc4cl_long_to_int_sat(vc4cl_mul_full(x, y, VC4CL_UNSIGNED) + vc4cl_int_to_ulong(z), VC4CL_UNSIGNED))
+SIMPLE_3(int, mad_sat, int, x, int, y, int, z, vc4cl_long_to_int_sat(vc4cl_mul_full(x, y, VC4CL_SIGNED) + vc4cl_int_to_long(z), VC4CL_SIGNED))
 
 SIMPLE_2(uchar, max, uchar, x, uchar, y, vc4cl_v8max(x, y))
 SIMPLE_2_SCALAR(uchar, max, uchar, x, uchar, y, vc4cl_v8max(x, y))

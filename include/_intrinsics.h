@@ -382,6 +382,8 @@ OVERLOAD_1(ulong, vc4cl_int_to_ulong, uint, val)
 OVERLOAD_1(ulong, vc4cl_int_to_ulong, int, val)
 OVERLOAD_1(long, vc4cl_int_to_long, uint, val)
 OVERLOAD_1(long, vc4cl_int_to_long, int, val)
+OVERLOAD_2_SCALAR(int, vc4cl_long_to_int_sat, long, val, uchar, sign)
+OVERLOAD_2_SCALAR(uint, vc4cl_long_to_int_sat, ulong, val, uchar, sign)
 
 /*
  * Other functions
@@ -398,6 +400,8 @@ OVERLOAD_1(int, vc4cl_is_inf_nan, float, val)
 
 OVERLOAD_3_SCALAR(int, vc4cl_mul_hi, int, x, int, y, uchar, sign)
 OVERLOAD_3_SCALAR(uint, vc4cl_mul_hi, uint, x, uint, y, uchar, sign)
+OVERLOAD_3_SCALAR(long, vc4cl_mul_full, int, x, int, y, uchar, sign)
+OVERLOAD_3_SCALAR(ulong, vc4cl_mul_full, uint, x, uint, y, uchar, sign)
 
 event_t vc4cl_set_event(event_t ev) CONST;
 
