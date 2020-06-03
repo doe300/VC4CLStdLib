@@ -203,10 +203,29 @@ SIMPLE_1(uchar, popcount, uchar, val, vc4cl_bitcast_uchar(_popcountByte(vc4cl_ex
 SIMPLE_1(char, popcount, char, val,  vc4cl_bitcast_char(_popcountByte(vc4cl_extend(val))))
 SIMPLE_1(ushort, popcount, ushort, val, vc4cl_bitcast_ushort(_popcountByte(vc4cl_extend(val & (arg_t) 0xFF)) + _popcountByte(vc4cl_extend((val >> 8) & (arg_t) 0xFF))))
 SIMPLE_1(short, popcount, short, val,  vc4cl_bitcast_short(_popcountByte(vc4cl_extend(val & (arg_t) 0xFF)) + _popcountByte(vc4cl_extend((val >> 8) & (arg_t) 0xFF))))
-SIMPLE_1(uint, popcount, uint, val, _popcountByte(val & (arg_t) 0xFF) + _popcountByte((val >> 8) & (arg_t) 0xFF) + _popcountByte((val >> 16) & (arg_t) 0xFF) + _popcountByte((val >> 24) & (arg_t) 0xFF))
-SIMPLE_1(int, popcount, int, val, _popcountByte(val & (arg_t) 0xFF) + _popcountByte((val >> 8) & (arg_t) 0xFF) + _popcountByte((val >> 16) & (arg_t) 0xFF) + _popcountByte((val >> 24) & (arg_t) 0xFF))
-SIMPLE_1(ulong, popcount, ulong, val, vc4cl_int_to_ulong(popcount(vc4cl_long_to_int(val)) + popcount(vc4cl_long_to_int(val >> 32))))
-SIMPLE_1(long, popcount, long, val, vc4cl_int_to_long(popcount(vc4cl_long_to_int(val)) + popcount(vc4cl_long_to_int(val >> 32))))
+COMPLEX_1(uint, popcount, uint, val,
+{
+	// Adapted from: https://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
+	arg_t tmp = val - ((val >> 1) & (arg_t)(0x55555555));
+	tmp = (tmp & (arg_t)(0x33333333)) + ((tmp >> 2) & (arg_t)(0x33333333));
+	tmp = (tmp + (tmp >> 4)) & (arg_t)(0x0F0F0F0F);
+	tmp = (tmp + (tmp >> 8)) & (arg_t)(0x00FF00FF);
+	tmp = (tmp + (tmp >> 16)) & (arg_t)(0x0000FFFF);
+	return tmp;
+})
+SIMPLE_1(int, popcount, int, val, vc4cl_bitcast_int(popcount(vc4cl_bitcast_uint(val))))
+COMPLEX_1(ulong, popcount, ulong, val,
+{
+	// Taken from: https://en.wikipedia.org/wiki/Hamming_weight#Efficient_implementation
+	val -= (val >> 1) & (arg_t)(0x5555555555555555);
+	val = (val & (arg_t)(0x3333333333333333)) + ((val >> 2) & (arg_t)(0x3333333333333333));
+	val = (val + (val >> 4)) & (arg_t)(0x0f0f0f0f0f0f0f0f);
+	val += val >>  8;
+	val += val >> 16;
+	val += val >> 32;
+	return val & 0x7f;
+})
+SIMPLE_1(long, popcount, long, val, vc4cl_bitcast_long(popcount(vc4cl_bitcast_ulong(val))))
 
 SIMPLE_2(uchar, mul24, uchar, x, uchar, y, vc4cl_bitcast_uchar(vc4cl_mul24(x, y, VC4CL_UNSIGNED)))
 SIMPLE_2(char, mul24, char, x, char, y, vc4cl_bitcast_char(vc4cl_mul24(x, y, VC4CL_SIGNED)))

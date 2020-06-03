@@ -209,18 +209,12 @@ INLINE FUNC_1(int, signbit, float, val) CONST
        return vc4cl_bitcast_uint(val) >> 31;
 }
 
-FOR_ALL_ELEMENTS(any, uchar, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, char, |, vc4cl_msb_set)
-FOR_ALL_ELEMENTS(any, ushort, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, short, |, vc4cl_msb_set)
-FOR_ALL_ELEMENTS(any, uint, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, int, |, vc4cl_msb_set)
 
-FOR_ALL_ELEMENTS(all, uchar, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, char, &, vc4cl_msb_set)
-FOR_ALL_ELEMENTS(all, ushort, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, short, &, vc4cl_msb_set)
-FOR_ALL_ELEMENTS(all, uint, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, int, &, vc4cl_msb_set)
 
 

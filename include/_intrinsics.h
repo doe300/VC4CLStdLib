@@ -102,7 +102,7 @@ OVERLOAD_1(uchar, vc4cl_pack_lsb, uchar, val)
 OVERLOAD_1(uchar, vc4cl_pack_lsb, uint, val)
 //calculates addition, but saturates the result afterwards (depending on signed integer over-/underflow of addition) (uses PACK 8: 32 -> 32)
 OVERLOAD_2(int, vc4cl_saturated_add, int, x, int, y)
-//calculates subtraction, but saturates the result afterwards(depending on signed integer over-/underflow of subtraction) (uses PACK 8: 32 -> 32)
+//NOTE: Since the 32 -> 32 saturation pack mode works differently for sub, the intrinsic is implemented differently than saturated_add
 OVERLOAD_2(int, vc4cl_saturated_sub, int, x, int, y)
 //saturates to unsigned byte (PACK 12:  32 -> 8a)
 OVERLOAD_1(uchar, vc4cl_saturate_lsb, uint, val)
