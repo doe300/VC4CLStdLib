@@ -403,6 +403,8 @@ OVERLOAD_3_SCALAR(ulong, vc4cl_mul_full, uint, x, uint, y, uchar, sign)
 
 event_t vc4cl_set_event(event_t ev) CONST;
 
+void vc4cl_barrier(cl_mem_fence_flags);
+
 /*
  * Vector functions
  */
