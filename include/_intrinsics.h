@@ -401,6 +401,15 @@ OVERLOAD_3_SCALAR(uint, vc4cl_mul_hi, uint, x, uint, y, uchar, sign)
 OVERLOAD_3_SCALAR(long, vc4cl_mul_full, int, x, int, y, uchar, sign)
 OVERLOAD_3_SCALAR(ulong, vc4cl_mul_full, uint, x, uint, y, uchar, sign)
 
+OVERLOAD_1(uchar, vc4cl_popcount, uchar, val)
+OVERLOAD_1(char, vc4cl_popcount, char, val)
+OVERLOAD_1(ushort, vc4cl_popcount, ushort, val)
+OVERLOAD_1(short, vc4cl_popcount, short, val)
+OVERLOAD_1(uint, vc4cl_popcount, uint, val)
+OVERLOAD_1(int, vc4cl_popcount, int, val)
+OVERLOAD_1(ulong, vc4cl_popcount, ulong, val)
+OVERLOAD_1(long, vc4cl_popcount, long, val)
+
 event_t vc4cl_set_event(event_t ev) CONST;
 
 void vc4cl_barrier(cl_mem_fence_flags);
