@@ -179,7 +179,7 @@ COMPARISON_1(isfinite, !vc4cl_is_inf_nan(val))
 COMPARISON_1(isinf, (vc4cl_bitcast_uint(val) & NAN) == INF)
 COMPARISON_1(isnan, vc4cl_is_nan(val))
 // From <cmath>: "Returns whether x is a normal value: i.e., whether it is neither infinity, NaN, zero or subnormal."
-COMPARISON_1(isnormal, !isinf(val) && !isnan(val) && (((vc4cl_bitcast_uint(val) & 0x7F800000) != 0) /* neither zero nor denormal */ || ((vc4cl_bitcast_uint(val) & 0x7FFFFFFF) == 0) /* +/- zero */))
+COMPARISON_1(isnormal, !isinf(val) && !isnan(val) && ((vc4cl_bitcast_uint(val) & 0x7F800000) != 0) /* neither zero nor denormal */)
 COMPARISON_2(isordered, isequal(x, x) && isequal(y, y))
 COMPARISON_2(isunordered, isnan(x) || isnan(y))
 
