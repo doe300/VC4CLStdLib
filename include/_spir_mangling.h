@@ -17,8 +17,6 @@
 
 #if __clang_major__ > 4 || (__clang_major__ == 3 && __clang_minor__ >= 9)
 
-uint _Z12get_work_dim(void) __attribute__((weak, alias("_Z12get_work_dimv")));
-
 float2 _Z3maxDv2_fDv2_f(float2, float2) __attribute__((weak, alias("_Z3maxDv2_fS_")));
 float3 _Z3maxDv3_fDv3_f(float3, float3) __attribute__((weak, alias("_Z3maxDv3_fS_")));
 float4 _Z3maxDv4_fDv4_f(float4, float4) __attribute__((weak, alias("_Z3maxDv4_fS_")));
