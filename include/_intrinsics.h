@@ -369,6 +369,8 @@ SIMPLE_1(uint, vc4cl_extend, ushort, val, vc4cl_zero_extend(val))
 SIMPLE_1(int, vc4cl_extend, short, val, vc4cl_sign_extend(val))
 SIMPLE_1(uint, vc4cl_extend, uint, val, val)
 SIMPLE_1(int, vc4cl_extend, int, val, val)
+SIMPLE_1(ulong, vc4cl_extend, ulong, val, val)
+SIMPLE_1(long, vc4cl_extend, long, val, val)
 
 OVERLOAD_1(ulong, vc4cl_bitcast_ulong, long, val)
 OVERLOAD_1(ulong, vc4cl_bitcast_ulong, ulong, val)
@@ -392,6 +394,8 @@ SIMPLE_1(ushort, vc4cl_msb_set, ushort, val, vc4cl_bitcast_ushort(vc4cl_extend(v
 SIMPLE_1(short, vc4cl_msb_set, short, val, vc4cl_bitcast_short(vc4cl_and((arg_t)(val >> 15), (arg_t)1)) == (arg_t)1)
 SIMPLE_1(uint, vc4cl_msb_set, uint, val, vc4cl_bitcast_uint(val >> 31 == 1))
 SIMPLE_1(int, vc4cl_msb_set, int, val, (val < (arg_t)0))
+SIMPLE_1(long, vc4cl_msb_set, ulong, val, (val >> 63 == 1))
+SIMPLE_1(long, vc4cl_msb_set, long, val, (val < (arg_t)0))
 
 OVERLOAD_1(int, vc4cl_is_nan, float, val)
 OVERLOAD_1(int, vc4cl_is_inf_nan, float, val)
@@ -426,6 +430,8 @@ OVERLOAD_2_SCALAR(ushort, vc4cl_vector_rotate, ushort, val, char, offset)
 OVERLOAD_2_SCALAR(short, vc4cl_vector_rotate, short, val, char, offset)
 OVERLOAD_2_SCALAR(uint, vc4cl_vector_rotate, uint, val, char, offset)
 OVERLOAD_2_SCALAR(int, vc4cl_vector_rotate, int, val, char, offset)
+OVERLOAD_2_SCALAR(ulong, vc4cl_vector_rotate, ulong, val, char, offset)
+OVERLOAD_2_SCALAR(long, vc4cl_vector_rotate, long, val, char, offset)
 OVERLOAD_2_SCALAR(float, vc4cl_vector_rotate, float, val, char, offset)
 
 /*

@@ -212,10 +212,12 @@ INLINE FUNC_1(int, signbit, float, val) CONST
 FOR_ALL_ELEMENTS(any, char, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, short, |, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(any, int, |, vc4cl_msb_set)
+FOR_ALL_ELEMENTS(any, long, |, vc4cl_msb_set)
 
 FOR_ALL_ELEMENTS(all, char, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, short, &, vc4cl_msb_set)
 FOR_ALL_ELEMENTS(all, int, &, vc4cl_msb_set)
+FOR_ALL_ELEMENTS(all, long, &, vc4cl_msb_set)
 
 
 //"Each bit of the result is the corresponding bit of a if the corresponding bit of c is 0.
@@ -227,6 +229,8 @@ SIMPLE_3(ushort, bitselect, ushort, a, ushort, b, ushort, c, (~c & a) | (c & b))
 SIMPLE_3(short, bitselect, short, a, short, b, short, c, (~c & a) | (c & b))
 SIMPLE_3(uint, bitselect, uint, a, uint, b, uint, c, (~c & a) | (c & b))
 SIMPLE_3(int, bitselect, int, a, int, b, int, c, (~c & a) | (c & b))
+SIMPLE_3(ulong, bitselect, ulong, a, ulong, b, ulong, c, (~c & a) | (c & b))
+SIMPLE_3(long, bitselect, long, a, long, b, long, c, (~c & a) | (c & b))
 SIMPLE_3(float, bitselect, float, a, float, b, float, c, vc4cl_bitcast_float((~vc4cl_bitcast_uint(c) & vc4cl_bitcast_uint(a)) | (vc4cl_bitcast_uint(c) & vc4cl_bitcast_uint(b))))
 
 //"For a scalar type, result = c ? b : a."
@@ -242,6 +246,10 @@ SELECT_SCALAR(uint, uint, vc4cl_extend(c) ? b : a)
 SELECT_SCALAR(uint, int, vc4cl_extend(c) ? b : a)
 SELECT_SCALAR(int, uint, vc4cl_extend(c) ? b : a)
 SELECT_SCALAR(int, int, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(ulong, ulong, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(ulong, long, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(long, ulong, vc4cl_extend(c) ? b : a)
+SELECT_SCALAR(long, long, vc4cl_extend(c) ? b : a)
 SELECT_SCALAR(float, uint, vc4cl_extend(c) ? b : a)
 SELECT_SCALAR(float, int, vc4cl_extend(c) ? b : a)
 
@@ -295,6 +303,22 @@ SELECT_VECTOR(int, int,
 	return vc4cl_msb_set(c) ? b : a;
 })
 SELECT_VECTOR(int, uint,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(ulong, ulong,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(ulong, long,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(long, long,
+{
+	return vc4cl_msb_set(c) ? b : a;
+})
+SELECT_VECTOR(long, ulong,
 {
 	return vc4cl_msb_set(c) ? b : a;
 })

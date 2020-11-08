@@ -30,6 +30,8 @@ SIMPLE_3(float, clamp, float, x, float, minval, float, maxval, fmin(fmax(x, minv
 // but both are accurate enough for 2 ULP maximum error
 SIMPLE_1(float, degrees, float, radians, 0x1.ca5dc2p+5 * radians)
 
+// Results are undefined for one of the inputs NaN or Inf,
+// so we can directly call the intrinsic and don't need to handle these inputs explicitly
 SIMPLE_2(float, max, float, x, float, y, vc4cl_fmax(x, y))
 SIMPLE_2_SCALAR(float, max, float, x, float, y, vc4cl_fmax(x, y))
 

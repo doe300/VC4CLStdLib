@@ -611,17 +611,17 @@ COMPLEX_1(float, floor, float, val, {
  * fma(x, y, z) = xy + z
  * fma(x, y, z) = NaN for x = 0 or y = 0
  * fma(x, y, z)= NaN for x = Inf, y = Inf, z = Inf
- * log2(x) = Nan for x < 0
- * log2(+Inf) = +Inf
  */
 // TODO not "infinitely precise product" and maybe not "correctly rounded"
 SIMPLE_3(float, fma, float, a, float, b, float, c, (a * b) + c)
 
-SIMPLE_2(float, fmax, float, x, float, y, vc4cl_fmax(x, y))
-SIMPLE_2_SCALAR(float, fmax, float, x, float, y, vc4cl_fmax(x, y))
+// The fmax/min ALU operations (vc4cl_fmax/vc4cl_fmin) handle NaNs as bigger then all, we need to handle them as:
+// " If one argument is a NaN, fmin/fmax() returns the other argument. If both arguments are NaNs, fmin/fmax() returns a NaN."
+SIMPLE_2(float, fmax, float, x, float, y, isnan(x) ? y : isnan(y) ? x : vc4cl_fmax(x, y))
+SIMPLE_2_SCALAR(float, fmax, float, x, float, y, isnan(x) ? y : isnan(y) ? x : vc4cl_fmax(x, y))
 
-SIMPLE_2(float, fmin, float, x, float, y, vc4cl_fmin(x, y))
-SIMPLE_2_SCALAR(float, fmin, float, x, float, y, vc4cl_fmin(x, y))
+SIMPLE_2(float, fmin, float, x, float, y, isnan(x) ? y : isnan(y) ? x : vc4cl_fmin(x, y))
+SIMPLE_2_SCALAR(float, fmin, float, x, float, y, isnan(x) ? y : isnan(y) ? x : vc4cl_fmin(x, y))
 
 /**
  * Expected behavior:
@@ -1236,7 +1236,7 @@ COMPLEX_1(float, sin, float, val, {
 	 *
 	 * We use argument reduction to bring it into range [-pi/2, pi/2] in which range the Pade approximation is accurate.
 	 */
-	// TODO normalization into [-pi/2, pi/2] is too inaccurate for large values!
+	// TODO normalization into [-pi/2, pi/2] is too inaccurate for large values! fmod too inaccurate (~8 ULP, should be 0)
 
 	// Since sine has a period of 2pi, these rewrites do not change the result (rounding error excluded):
 	// bring into range [-2pi, 2pi]
