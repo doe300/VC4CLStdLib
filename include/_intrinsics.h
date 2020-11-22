@@ -379,11 +379,13 @@ OVERLOAD_1(long, vc4cl_bitcast_long, long, val)
 OVERLOAD_1(uint, vc4cl_long_to_int, ulong, val)
 OVERLOAD_1(int, vc4cl_long_to_int, long, val)
 OVERLOAD_1(ulong, vc4cl_int_to_ulong, uint, val)
-OVERLOAD_1(ulong, vc4cl_int_to_ulong, int, val)
-OVERLOAD_1(long, vc4cl_int_to_long, uint, val)
 OVERLOAD_1(long, vc4cl_int_to_long, int, val)
+SIMPLE_1(ulong, vc4cl_extend_to_long, uint, val, vc4cl_int_to_ulong(val))
+SIMPLE_1(long, vc4cl_extend_to_long, int, val, vc4cl_int_to_long(val))
 OVERLOAD_2_SCALAR(int, vc4cl_long_to_int_sat, long, val, uchar, sign)
 OVERLOAD_2_SCALAR(uint, vc4cl_long_to_int_sat, ulong, val, uchar, sign)
+OVERLOAD_1(float, vc4cl_long_to_float, long, val)
+OVERLOAD_1(float, vc4cl_ulong_to_float, ulong, val)
 
 /*
  * Other functions

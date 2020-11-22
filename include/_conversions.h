@@ -73,6 +73,8 @@
   val))))
 
 #define CONVERSION_WITH_SATURATION(destType, srcType, num, saturation, val) \
+  CC(destType,_MAX) == CC(srcType,_MAX) && CC(destType,_MIN) == CC(srcType,_MIN) ? \
+    /* same type */ vc4cl_bitcast_int(vc4cl_extend(val)) : \
   0##saturation == _sat ? \
     SATURATE_INTEGER(destType, srcType, num, val) : \
   vc4cl_bitcast_int(vc4cl_extend(val))
@@ -114,111 +116,154 @@
 #define CONVERT_LONG_TO_INTEGER(destType, srcType, saturation, rounding) \
         INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, /* scalar */, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         } \
         INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 2, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##2##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         } \
         INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 3, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##3##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         } \
         INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 4, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##4##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         } \
         INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 8, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##8##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         } \
         INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_bitcast_##destType(CONVERSION_WITH_SATURATION(destType, srcType, 16, saturation, vc4cl_long_to_int(val))); \
+            uchar sign = (srcType)-1 < (srcType)0 ? VC4CL_SIGNED : VC4CL_UNSIGNED; \
+            return convert_##destType##16##saturation##rounding(CC(0,saturation) == _sat ? vc4cl_long_to_int_sat(val, sign) : vc4cl_long_to_int(val)); \
         }
 #endif
 
 #ifndef CONVERT_INTEGER_TO_LONG
+// No saturation required, since all smaller integer types always fit into 64-bit signed integer
 #define CONVERT_INTEGER_TO_LONG(srcType, saturation, rounding) \
         INLINE long convert_long##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE long##2 convert_long##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE long##3 convert_long##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE long##4 convert_long##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE long##8 convert_long##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE long##16 convert_long##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_long(vc4cl_extend(val)); \
+            return vc4cl_bitcast_long(vc4cl_extend_to_long(vc4cl_extend(val))); \
         }
 #endif
 
 #ifndef CONVERT_INTEGER_TO_ULONG
+// Only need to saturate on minimum (zero), since maximum is bigger than any smaller integer type can hold
 #define CONVERT_INTEGER_TO_ULONG(srcType, saturation, rounding) \
         INLINE ulong convert_ulong##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType)CC(0,saturation) == (srcType)_sat && val < (srcType)0) ? (srcType)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE ulong##2 convert_ulong##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType##2)CC(0,saturation) == (srcType##2)_sat && val < (srcType##2)0) ? (srcType##2)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE ulong##3 convert_ulong##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType##3)CC(0,saturation) == (srcType##3)_sat && val < (srcType##3)0) ? (srcType##3)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE ulong##4 convert_ulong##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType##4)CC(0,saturation) == (srcType##4)_sat && val < (srcType##4)0) ? (srcType##4)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE ulong##8 convert_ulong##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType##8)CC(0,saturation) == (srcType##8)_sat && val < (srcType##8)0) ? (srcType##8)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         } \
         INLINE ulong##16 convert_ulong##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
         { \
-            return vc4cl_int_to_ulong(vc4cl_extend(val)); \
+            val = ((srcType##16)CC(0,saturation) == (srcType##16)_sat && val < (srcType##16)0) ? (srcType##16)0 : val; \
+            return vc4cl_bitcast_ulong(vc4cl_extend_to_long(vc4cl_extend(val))); \
         }
 #endif
 
 #ifndef CONVERT_LONG_TO_LONG
-// TODO fix saturations
 #define CONVERT_LONG_TO_LONG(destType, srcType, saturation, rounding) \
         INLINE destType convert_##destType##saturation##rounding(srcType val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         } \
         INLINE destType##2 convert_##destType##2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType##2)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         } \
         INLINE destType##3 convert_##destType##3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType##3)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         } \
         INLINE destType##4 convert_##destType##4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType##4)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         } \
         INLINE destType##8 convert_##destType##8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType##8)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         } \
         INLINE destType##16 convert_##destType##16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
         { \
+            if(CC(0,saturation) == _sat && CC(srcType,_MAX) != CC(destType,_MAX)) { \
+                val = (srcType)-1 < (srcType)0 ? \
+                    /* signed -> unsigned */ (vc4cl_msb_set(val) ? 0 : val) : \
+                    /* unsigned -> signed*/ (vc4cl_msb_set(val) ? (srcType##16)LONG_MAX : val); \
+            } \
             return vc4cl_bitcast_##destType(val); \
         }
 #endif
@@ -286,6 +331,34 @@
         INLINE float##16 convert_float16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
         { \
             return vc4cl_itof(CONVERSION_WITH_SATURATION_FLOAT(float, 16, saturation, val)); \
+        }
+#endif
+
+#ifndef CONVERT_LONG_TO_FLOAT
+#define CONVERT_LONG_TO_FLOAT(srcType, saturation, rounding) \
+        INLINE float convert_float##saturation##rounding(srcType val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
+        } \
+        INLINE float##2 convert_float2##saturation##rounding(srcType##2 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
+        } \
+        INLINE float##3 convert_float3##saturation##rounding(srcType##3 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
+        } \
+        INLINE float##4 convert_float4##saturation##rounding(srcType##4 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
+        } \
+        INLINE float##8 convert_float8##saturation##rounding(srcType##8 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
+        } \
+        INLINE float##16 convert_float16##saturation##rounding(srcType##16 val) OVERLOADABLE CONST \
+        { \
+            return vc4cl_##srcType##_to_float(val); \
         }
 #endif
 
@@ -1058,6 +1131,26 @@ CONVERT_FLOAT_TO_FLOAT(_sat, _rte)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtz)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtp)
 CONVERT_FLOAT_TO_FLOAT(_sat, _rtn)
+CONVERT_LONG_TO_FLOAT(long, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_FLOAT(long, /* no saturation*/, _rte)
+CONVERT_LONG_TO_FLOAT(long, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_FLOAT(long, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_FLOAT(long, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_FLOAT(long, _sat, /* no rounding */)
+CONVERT_LONG_TO_FLOAT(long, _sat, _rte)
+CONVERT_LONG_TO_FLOAT(long, _sat, _rtz)
+CONVERT_LONG_TO_FLOAT(long, _sat, _rtp)
+CONVERT_LONG_TO_FLOAT(long, _sat, _rtn)
+CONVERT_LONG_TO_FLOAT(ulong, /* no saturation*/, /* no rounding */)
+CONVERT_LONG_TO_FLOAT(ulong, /* no saturation*/, _rte)
+CONVERT_LONG_TO_FLOAT(ulong, /* no saturation*/, _rtz)
+CONVERT_LONG_TO_FLOAT(ulong, /* no saturation*/, _rtp)
+CONVERT_LONG_TO_FLOAT(ulong, /* no saturation*/, _rtn)
+CONVERT_LONG_TO_FLOAT(ulong, _sat, /* no rounding */)
+CONVERT_LONG_TO_FLOAT(ulong, _sat, _rte)
+CONVERT_LONG_TO_FLOAT(ulong, _sat, _rtz)
+CONVERT_LONG_TO_FLOAT(ulong, _sat, _rtp)
+CONVERT_LONG_TO_FLOAT(ulong, _sat, _rtn)
 
 /*
  * To ulong
@@ -1756,6 +1849,7 @@ AS_TYPE(long16, long16)
 #undef CONVERT_LONG_TO_LONG
 #undef CONVERT_FLOAT_TO_INTEGER
 #undef CONVERT_INTEGER_TO_FLOAT
+#undef CONVERT_LONG_TO_FLOAT
 #undef CONVERT_FLOAT_TO_FLOAT
 #undef CONVERT_UINT_TO_FLOAT
 #undef CONVERT_FLOAT_TO_UINT

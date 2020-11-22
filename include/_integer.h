@@ -34,6 +34,8 @@ SIMPLE_1(ushort, abs, short, val, vc4cl_bitcast_ushort(max(vc4cl_extend(val), -v
 SIMPLE_1(ushort, abs, ushort, val, val)
 SIMPLE_1(uint, abs, int, val, vc4cl_bitcast_uint(max(val, -val)))
 SIMPLE_1(uint, abs, uint, val, val)
+SIMPLE_1(ulong, abs, long, val, vc4cl_bitcast_ulong(max(val, -val)))
+SIMPLE_1(ulong, abs, ulong, val, val)
 
 //based on pocl (pocl/lib/kernel/abs_diff.cl)
 SIMPLE_2(uchar, abs_diff, uchar, x, uchar, y, (result_t)abs(x > y ? x - y : y - x))
@@ -57,6 +59,13 @@ COMPLEX_2(uint, abs_diff, int, x, int, y, {
 	result_t flow = abs(x) + abs(y);
 	return (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ noflow : /* different signs */ flow;
 })
+SIMPLE_2(ulong, abs_diff, ulong, x, ulong, y, abs(x > y ? x - y : y - x))
+COMPLEX_2(ulong, abs_diff, long, x, long, y, {
+	// explicitly calculate both variants to prevent clang from converting the ?:-operator to an if-else block
+	result_t noflow = abs(x - y);
+	result_t flow = abs(x) + abs(y);
+	return (vc4cl_msb_set(x) == vc4cl_msb_set(y)) ? /* same sign -> no under/overflow */ noflow : /* different signs */ flow;
+})
 
 SIMPLE_2(uchar, add_sat, uchar, x, uchar, y, vc4cl_v8adds(x, y))
 SIMPLE_2(char, add_sat, char, x, char, y, vc4cl_bitcast_char(clamp(vc4cl_extend(x) + vc4cl_extend(y), SCHAR_MIN, SCHAR_MAX)))
@@ -74,6 +83,8 @@ SIMPLE_2(short, hadd, short, x, short, y, vc4cl_bitcast_short(vc4cl_asr(vc4cl_ex
 //based on pocl (pocl/lib/kernel/hadd.cl)
 SIMPLE_2(uint, hadd, uint, x, uint, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
 SIMPLE_2(int, hadd, int, x, int, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
+SIMPLE_2(ulong, hadd, ulong, x, ulong, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
+SIMPLE_2(long, hadd, long, x, long, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + (x & y & (arg0_t)1))
 
 //"Returns (x + y + 1) >> 1.  The intermediate sum does not modulo overflow."
 SIMPLE_2(uchar, rhadd, uchar, x, uchar, y, vc4cl_pack_lsb((vc4cl_extend(x) + vc4cl_extend(y) + (uint)1) >> 1))
@@ -83,6 +94,8 @@ SIMPLE_2(short, rhadd, short, x, short, y, vc4cl_bitcast_short(vc4cl_asr(vc4cl_e
 //based on pocl (pocl/lib/kernel/rhadd.cl)
 SIMPLE_2(uint, rhadd, uint, x, uint, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
 SIMPLE_2(int, rhadd, int, x, int, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
+SIMPLE_2(ulong, rhadd, ulong, x, ulong, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
+SIMPLE_2(long, rhadd, long, x, long, y, (x >> (arg0_t)1) + (y >> (arg0_t)1) + ((x | y) & (arg0_t)1))
 
 SIMPLE_INTEGER_3(clamp, val, minval, maxval, min(max(val, minval), maxval))
 SIMPLE_3_TWO_SCALAR(uchar, clamp, uchar, val, uchar, minval, uchar, maxval, min(max(val, minval), maxval))
@@ -133,7 +146,7 @@ COMPLEX_2(ulong, max, ulong, x, ulong, y,
 
 	/* can't directly use this condition in return value, since for ?: operator, the condition and return value needs to have the same type */
 	int_t selection = upX > upY ? 0 : (upX < upY ? 1 : (lowX > lowY ? 0 : 1));
-	return vc4cl_int_to_ulong(selection) == 0 ? x : y;
+	return vc4cl_int_to_long(selection) == 0 ? x : y;
 })
 SIMPLE_2_SCALAR(ulong, max, ulong, x, ulong, y, max(x, (arg0_t) y))
 SIMPLE_2(long, max, long, x, long, y, vc4cl_max(x, y, VC4CL_SIGNED))
@@ -160,7 +173,7 @@ COMPLEX_2(ulong, min, ulong, x, ulong, y,
 
 	/* can't directly use this condition in return value, since for ?: operator, the condition and return value needs to have the same type */
 	int_t selection = upX < upY ? 0 : (upX > upY ? 1 : (lowX < lowY ? 0 : 1));
-	return vc4cl_int_to_ulong(selection) == 0 ? x : y;
+	return vc4cl_int_to_long(selection) == 0 ? x : y;
 })
 SIMPLE_2_SCALAR(ulong, min, ulong, x, ulong, y, min(x, (arg0_t) y))
 SIMPLE_2(long, min, long, x, long, y, vc4cl_min(x, y, VC4CL_SIGNED))
