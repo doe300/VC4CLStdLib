@@ -30,6 +30,7 @@ extern "C"
 #include "_images.h"
 #include "_printf.h"
 #include "_spir_mangling.h"
+#include "_clcxx_mangling.h"
 
 #undef ALL_BITS_SET
 #undef OVERLOADABLE
