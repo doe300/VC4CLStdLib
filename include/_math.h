@@ -13,6 +13,8 @@
 // TODO test-cases for all the known Edge Case Behavior
 // TODO can remove nan-check from rounding functions? The large value check should also contain NaNs,
 // since VC4 considers NaNs to be the "largest" values
+// TODO recheck NaN handling for functions based on multiplication/division once they handle NaNs correctly,
+// maybe we can remove some of those extra codes
 
 /*
  * Remove some macros for more efficient versions
@@ -79,7 +81,11 @@ COMPLEX_3_SCALAR(float, fast_pown, float, val, uint, n, uchar, width, {
  * acos(1) = +-0
  * acos(x) = NaN for |x| > 1
  */
-SIMPLE_1(float, acos, float, val, M_PI_2_F - asin(val))
+COMPLEX_1(float, acos, float, val, {
+	result_t result = M_PI_2_F - asin(val);
+	result = fabs(val) > (result_t)1.0f ? nan(0) : result;
+	return isnan(val) ? val : result;
+})
 
 /**
  * Expected behavior:
@@ -99,7 +105,11 @@ SIMPLE_1(float, acosh, float, val, log(val + sqrt(val * val + 1)))
  * acospi(1) = +-0
  * acospi(x) = NaN for |x| > 1
  */
-SIMPLE_1(float, acospi, float, val, acos(val) * M_1_PI_F)
+COMPLEX_1(float, acospi, float, val, {
+	result_t result = acos(val) * M_1_PI_F;
+	result = fabs(val) > (result_t)1.0f ? nan(0) : result;
+	return isnan(val) ? val : result;
+})
 
 /**
  * Expected behavior:
@@ -107,7 +117,11 @@ SIMPLE_1(float, acospi, float, val, acos(val) * M_1_PI_F)
  * asin(+-0) = +-0
  * asin(x) = NaN for |x| > 1
  */
-SIMPLE_1(float, asin, float, val, atan(val *rsqrt(1 - val * val)))
+COMPLEX_1(float, asin, float, val, {
+	result_t result = atan(val *rsqrt(1 - val * val));
+	result = fabs(val) > (result_t)1.0f ? nan(0) : result;
+	return isnan(val) ? val : result;
+})
 
 /**
  * Expected behavior:
@@ -124,7 +138,11 @@ SIMPLE_1(float, asinh, float, val, log(val + sqrt(val * val - 1)))
  * asinpi(+-0) = +-0
  * asinpi(x) = NaN for |x| > 1
  */
-SIMPLE_1(float, asinpi, float, val, asin(val) * M_1_PI_F)
+COMPLEX_1(float, asinpi, float, val, {
+	result_t result = asin(val) * M_1_PI_F;
+	result = fabs(val) > (result_t)1.0f ? nan(0) : result;
+	return isnan(val) ? val : result;
+})
 
 // https://stackoverflow.com/questions/23047978/how-is-arctan-implemented
 // https://en.wikipedia.org/wiki/Taylor_series#Approximation_and_convergence (too inaccurate!)
@@ -161,7 +179,11 @@ COMPLEX_1(float, atan, float, val, {
 		(1155 + 1575 * r * r + 525 * r * r * r * r + 25 * r * r * r * r * r * r);
 
 	// calculate the result (2^n * approx)
-	return ((result_t)(2 << (n - 1))) * approx;
+	result_t result = ((result_t)(2 << (n - 1))) * approx;
+	// atan(x) with x >= 2^26 ~ atan(Inf) => pi/2
+	result = (fabs(val) >= (result_t)0x1p+26f) ? copysign(M_PI_2_F, val) : result;
+	// atan(+-NaN) = +-NaN
+	return isnan(val) ? val : result;
 })
 
 /**
@@ -215,7 +237,7 @@ SIMPLE_1(float, atanh, float, val, ((result_t) 0.5f) * log((1 + val) / (1 - val)
  * atanpi(+-0) = +-0
  * atanpi(+-Inf) = +-0.5
  */
-SIMPLE_1(float, atanpi, float, val, atan(val) * M_1_PI_F)
+SIMPLE_1(float, atanpi, float, val, isnan(val) ? val : atan(val) * M_1_PI_F)
 
 /**
  * Expected behavior:
@@ -262,7 +284,7 @@ COMPLEX_1(float, ceil, float, val, {
 	// |val| < 2^23 fits into integer
 	result_t truncated = vc4cl_itof(vc4cl_ftoi(val));
 	// if the truncation is smaller than val (positive numbers), add 1 to round up
-	result_t ceiling = truncated + vc4cl_itof(truncated < val);
+	result_t ceiling = truncated + (truncated < val ? (result_t)1.0f: (result_t)0.0f);
 	// fix for ceil([-0.9, -0.0]) = -0.0
 	result_t result = copysign(ceiling, val);
 	// deciding here which value to return saves us up to two jumps
@@ -327,7 +349,9 @@ COMPLEX_1(float, cos, float, val, {
 	modifiedVal = modifiedVal > M_PI_2_F ? modifiedVal - M_PI_F : modifiedVal;
 
 	arg_t result = cos_pade(invertSign ? -modifiedVal : modifiedVal);
-	return invertSign ? -result : result;
+	result = invertSign ? -result : result;
+	result = isinf(val) ? copysign(nan(0), val) : result;
+	return isnan(val) ? val : result;
 })
 
 /**
@@ -582,7 +606,11 @@ SIMPLE_1(float, fabs, float, val, vc4cl_fmaxabs(val, 0.0f))
  * fdim(NaN, y) = NaN
  */
 //"x-y if x>y, +0 if x is less than or equal to y."
-SIMPLE_2(float, fdim, float, x, float, y, x > y ? x - y : 0.0f)
+COMPLEX_2(float, fdim, float, x, float, y, {
+	result_t result = x > y ? x - y : 0.0f;
+	result = isnan(x) ? x : result;
+	return isnan(y) ? y : result;
+})
 
 /**
  * Expected behavior:
@@ -600,7 +628,7 @@ COMPLEX_1(float, floor, float, val, {
 	// |val| < 2^23 fits into integer
 	result_t truncated = vc4cl_itof(vc4cl_ftoi(val));
 	// if the truncation is greater than val (negative numbers), subtract 1 to round down
-	result_t floor_val = truncated - vc4cl_itof(truncated > val);
+	result_t floor_val = truncated - (truncated > val ? (result_t)1.0f : (result_t)0.0f);
 	// deciding here which value to return saves us up to two jumps
 	return tooBig ? val : floor_val;
 })
@@ -627,11 +655,17 @@ SIMPLE_2_SCALAR(float, fmin, float, x, float, y, isnan(x) ? y : isnan(y) ? x : v
  * Expected behavior:
  *
  * fmod(+-0, y) = +-0 for y != 0
- * fmod(x, y) = NaN for x = +-Inf or x = 0
+ * fmod(x, y) = NaN for x = +-Inf or y = 0
  * fmod(x, +-Inf) = x
+ * fmod(+-0, NaN) = NaN
  */
 //"Modulus. Returns x - y * trunc(x/y)"
-SIMPLE_2(float, fmod, float, x, float, y, x - y * trunc(x / y))
+COMPLEX_2(float, fmod, float, x, float, y, {
+	result_t result = x - y * trunc(x / y);
+	result = (isinf(x) || sign(y) == (result_t)0.0f) ? (result_t)nan(0) : result;
+	result = (isinf(y) || isnan(x)) ? x : result;
+	return isnan(y) ? y : result;
+})
 
 /**
  * Expected behavior:
@@ -697,7 +731,7 @@ COMPLEX_2(float, frexp, float, x, __private int, *exp, {
  * Expected behavior:
  *
  * hypot(x, y) = hypot(y, x) = hypot(x, -y)
- * hypot(x, 0+-) = fabs(x)
+ * hypot(x, +-0) = fabs(x)
  * hypot(+-Inf, y) = +Inf
  */
 SIMPLE_2(float, hypot, float, x, float, y, sqrt(x *x + y * y))
@@ -848,6 +882,9 @@ COMPLEX_1(float, log1p_pade, float, val, {
  * log2(x) = Nan for x < 0
  * log2(+Inf) = +Inf
  */
+// TODO alternatively could calculate as log2(M * 2^E) = log2(M) + E
+// with log2(M) = native_log2(M1) + native_log2(M2) + ... (until exact enough),
+// TODO would need to find factors M1, M2, ... of M!!
 SIMPLE_1(float, log2, float, val, log(val) * (1.0f / M_LN2_F))
 
 /*
@@ -1006,8 +1043,10 @@ SIMPLE_1(float, nan, uint, nancode, vc4cl_bitcast_float(NAN | nancode))
 /**
  * Expected behavior:
  *
- * nextafter(-0, y > 0) = smallest positive denormal value
- * nextafter(0, y < 0) = smallest negative denormal value
+ * nextafter(+smallest normal, y < +smallest normal) = +0
+ * nextafter(-smallest normal, y > -smallest normal) = -0
+ * nextafter(-0, y > 0) = smallest positive normal value
+ * nextafter(0, y < 0) = smallest negative normal value
  */
 COMPLEX_2(float, nextafter, float, x, float, y, {
 	int_t ix = vc4cl_bitcast_int(x);
@@ -1015,10 +1054,15 @@ COMPLEX_2(float, nextafter, float, x, float, y, {
 	/* x > y -> x -= ulp otherwise x += ulp */
 	int_t xPos = ix > iy ? ix - 1 : ix + 1;
 	/* x < y -> x -= ulp otherwise x += ulp */
-	int_t xNeg = iy > 0 || ix > iy ? ix - 1 : ix + 1;
+	int_t xNeg = iy >= 0 || ix > iy ? ix - 1 : ix + 1;
 	int_t xNotY = ix >= 0 ? /* x > 0 */ xPos : /* x < 0 */ xNeg;
 	int_t res = x == y ? iy : xNotY;
-	return vc4cl_bitcast_float(res);
+	result_t result = vc4cl_bitcast_float(res);
+	result = (x == (result_t)-0.0f && y > 0.0f) ? (result_t)FLT_MIN : result;
+	result = (x == (result_t)0.0f && y < 0.0f) ? (result_t)-FLT_MIN : result;
+	result = (x == (result_t)FLT_MIN && y < (result_t)FLT_MIN) ? (result) +0.0f : result;
+	result = (x == (result_t)-FLT_MIN && y > (result_t)-FLT_MIN) ? (result) -0.0f : result;
+	return isnan(x) ? x : (isnan(y) ? y : result);
 })
 
 /**
@@ -1132,7 +1176,7 @@ COMPLEX_1(float, rint, float, val, {
 	// for negative numbers, truncated is larger than value, for positive it is smaller
 	result_t diff = val - truncated;
 	// -> if the |difference| is > 0.5, subtract/add 1
-	result_t correction = 0.0f + vc4cl_itof(diff < -0.5f) * -1.0f + vc4cl_itof(diff > 0.5f) * 1.0f;
+	result_t correction = 0.0f + (diff < -0.5f ? (result_t)-1.0f : (result_t)0.0f) + (diff > 0.5f ? (result_t)1.0f : (result_t)0.0f);
 	// if the value is exactly the half, round to nearest even
 	int_t isHalfWay = diff == 0.5f || diff == -0.5f;
 	// if the truncated integer is even, use it. Otherwise (lsb of integer is 1) subtract/add 1
@@ -1175,7 +1219,7 @@ COMPLEX_1(float, round, float, val, {
 	// for negative numbers, truncated is larger than value, for positive it is smaller
 	result_t diff = val - truncated;
 	// -> if the |difference| is >= 0.5, subtract/add 1
-	result_t correction = 0.0f + vc4cl_itof(diff <= -0.5f) * -1.0f + vc4cl_itof(diff >= 0.5f) * 1.0f;
+	result_t correction = 0.0f + (diff <= -0.5f ? (result_t)-1.0f : (result_t)0.0f) + (diff >= 0.5f ? (result_t)1.0f : (result_t)0.0f);
 	result_t result = truncated + correction;
 	// deciding here which value to return saves us up to two jumps
 	return tooBig ? val : result;
@@ -1196,7 +1240,14 @@ COMPLEX_1(float, rsqrt, float, x, {
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
 	u.x = u.x * (1.5f - xhalf * u.x * u.x);
-	return u.x;
+
+	// rsqrt(NaN) = NaN
+	result_t result = isnan(x) ? x : u.x;
+	// rsqrt(Inf) = 0
+	result = isinf(x) ? (result_t)0.0f : result;
+	// rsqrt(x) for x < 0 = -NaN
+	result = x < (result_t)0.0f ? copysign((result_t)nan(0), -1.0f) : result;
+	return result;
 })
 
 COMPLEX_1(float, sin_pade, float, val, {
@@ -1223,6 +1274,34 @@ COMPLEX_1(float, sin_pade, float, val, {
 	arg_t down = 1.0f + (c * val * val) + (d * val * val * val * val) + (e * val * val * val * val * val * val);
 	return up / down;
 })
+
+COMPLEX_1(float, sin_fast, float, x, {
+	/*
+	 * Alternative implementation, used by Mesa3D
+	 * - less instructions to calculate
+	 * - has greater error (even for range -pi/2, pi/2)
+	 * https://gitlab.freedesktop.org/mesa/mesa/blob/master/src/compiler/nir/nir_opt_algebraic.py
+	 * https://web.archive.org/web/20180105155939/http://forum.devmaster.net/t/fast-and-accurate-sine-cosine/9648
+	 */
+	const arg_t B = 4.0 / M_PI;
+    const arg_t C = -4.0 / (M_PI * M_PI);
+
+    arg_t y = B * x + C * x * fabs(x);
+
+    //  const float Q = 0.775;
+    const arg_t P = (arg_t)0.225;
+	y = P * (y * fabs(y) - y) + y;   // Q * y + P * y * abs(y)
+	return y;
+})
+
+//COMPLEX_1(float, sin_taylor, float, x, {
+	/*
+	 * Alternative implementation, used by Mesa3D VC4 driver
+	 * - calculates the Taylor series
+	 * - 
+	 * https://gitlab.freedesktop.org/mesa/mesa/blob/master/src/gallium/drivers/vc4/vc4_program.c  (function ntq_fsin)
+	 */
+//})
 
 /**
  * Expected behavior:
@@ -1377,7 +1456,9 @@ COMPLEX_1(float, sqrt, float, val, {
 
 	// The above algorithm is too inaccurate, but the following line is accurate enough and not too expensive to calculate
 	// sqrt(x) = x / sqrt(x) = x * rsqrt(x)
-	return val == 0.0f ? (result_t) 0.0f : (val * rsqrt(val));
+	result_t result = val == 0.0f ? (result_t) 0.0f : (val * rsqrt(val));
+	result = isnan(val) ? val : result;
+	return val < 0.0f ? (result_t)nan(0) : result;
 })
 
 /**
