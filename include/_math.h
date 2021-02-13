@@ -287,6 +287,8 @@ COMPLEX_1(float, ceil, float, val, {
 	result_t ceiling = truncated + (truncated < val ? (result_t)1.0f: (result_t)0.0f);
 	// fix for ceil([-0.9, -0.0]) = -0.0
 	result_t result = copysign(ceiling, val);
+	// fix for negative subnormal values
+	result = result < val ? result + (result_t) 1.0f : result;
 	// deciding here which value to return saves us up to two jumps
 	return tooBig ? val : result;
 })
@@ -686,7 +688,6 @@ COMPLEX_2(float, fract, float, val, __global float, *iptr, {
 })
 
 COMPLEX_2(float, fract, float, val, __local float, *iptr, {
-	// TODO accuracy
 	//"Returns fmin( x – floor (x), 0x1.fffffep-1f ). floor(x) is returned in iptr."
 	result_t tmp = floor(val);
 	*iptr = tmp;
@@ -695,7 +696,6 @@ COMPLEX_2(float, fract, float, val, __local float, *iptr, {
 })
 
 COMPLEX_2(float, fract, float, val, __private float, *iptr, {
-	// TODO accuracy
 	//"Returns fmin( x – floor (x), 0x1.fffffep-1f ). floor(x) is returned in iptr."
 	result_t tmp = floor(val);
 	*iptr = tmp;
@@ -763,11 +763,21 @@ COMPLEX_1(int, ilogb, float, x, {
 	result_t bitcast = vc4cl_bitcast_int(x);
 	// deduct exponent offset
 	int_t result = ((bitcast >> 23) & 0xFF) - 127;
+	// we need to support subnormals here, since they are only used as input, not output
+	int_t mantissa = bitcast & (int_t) 0x007FFFFF;
+	result = result == -127 ? -(vc4cl_clz(mantissa) - (32 - 23)) - 127 : result;
 	result = vc4cl_is_zero(x) ? (result_t)FP_ILOGB0 : result;
 	result = isinf(x) ? (result_t)INT_MAX : result;
 	return isnan(x) ? (result_t)FP_ILOGBNAN : result;
 })
 
+/**
+ * Expected behavior:
+ *
+ * ldexp(+-0, n) = +-0
+ * ldexp(x, 0) = x
+ * ldexp(+-Inf, n) = +-Inf
+ */
 //"Multiply x by 2 to the power k."
 COMPLEX_2(float, ldexp, float, x, int, k, {
 	// Taken from MESA (https://gitlab.freedesktop.org/mesa/mesa/-/blob/master/src/compiler/nir/nir_opt_algebraic.py)
@@ -776,7 +786,7 @@ COMPLEX_2(float, ldexp, float, x, int, k, {
 	int_t pow2_1 = ((exp >> 1) + 127) << 23;
 	int_t pow2_2 = ((exp - (exp >> 1)) + 127) << 23;
 	result_t result = x * vc4cl_bitcast_float(pow2_1) * vc4cl_bitcast_float(pow2_2);
-	return isnan(x) ? x : result;
+	return vc4cl_is_inf_nan(x) ? x : result;
 })
 SIMPLE_2_SCALAR(float, ldexp, float, x, int, k, x *(k >= 0 ? vc4cl_itof(1 << k) : 1.0f / vc4cl_itof(1 << -k)))
 
@@ -1039,6 +1049,9 @@ COMPLEX_1(float, logb, float, x, {
 	int_t bitcast = vc4cl_bitcast_int(x);
 	// deduct exponent offset
 	int_t exponent = ((bitcast >> 23) & 0xFF) - 127;
+	// we need to support subnormals here, since they are only used as input, not output
+	int_t mantissa = bitcast & (int_t) 0x007FFFFF;
+	exponent = exponent == -127 ? -(vc4cl_clz(mantissa) - (32 - 23)) - 127 : exponent;
 	result_t result = vc4cl_itof(exponent);
 	result = vc4cl_is_zero(x) ? (result_t)-INFINITY : result;
 	result = isinf(x) ? fabs(x) : result;
