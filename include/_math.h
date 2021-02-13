@@ -678,11 +678,11 @@ COMPLEX_2(float, fmod, float, x, float, y, {
  * fract(NaN, iptr) = NaN, iptr = NaN
  */
 COMPLEX_2(float, fract, float, val, __global float, *iptr, {
-	// TODO accuracy
 	//"Returns fmin( x – floor (x), 0x1.fffffep-1f ). floor(x) is returned in iptr."
 	result_t tmp = floor(val);
 	*iptr = tmp;
-	return fmin(val - tmp, 0x1.fffffep-1f);
+	tmp = fmin(val - tmp, 0x1.fffffep-1f);
+	return isnan(val) ? val : tmp;
 })
 
 COMPLEX_2(float, fract, float, val, __local float, *iptr, {
@@ -690,7 +690,8 @@ COMPLEX_2(float, fract, float, val, __local float, *iptr, {
 	//"Returns fmin( x – floor (x), 0x1.fffffep-1f ). floor(x) is returned in iptr."
 	result_t tmp = floor(val);
 	*iptr = tmp;
-	return fmin(val - tmp, 0x1.fffffep-1f);
+	tmp = fmin(val - tmp, 0x1.fffffep-1f);
+	return isnan(val) ? val : tmp;
 })
 
 COMPLEX_2(float, fract, float, val, __private float, *iptr, {
@@ -698,7 +699,8 @@ COMPLEX_2(float, fract, float, val, __private float, *iptr, {
 	//"Returns fmin( x – floor (x), 0x1.fffffep-1f ). floor(x) is returned in iptr."
 	result_t tmp = floor(val);
 	*iptr = tmp;
-	return fmin(val - tmp, 0x1.fffffep-1f);
+	tmp = fmin(val - tmp, 0x1.fffffep-1f);
+	return isnan(val) ? val : tmp;
 })
 
 /**
@@ -709,22 +711,34 @@ COMPLEX_2(float, fract, float, val, __private float, *iptr, {
  * frexp(NaN, exp) = NaN, exp = 0
  */
 COMPLEX_2(float, frexp, float, x, __global int, *exp, {
-	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
-	int_t e = ilogb(x);
-	*exp = e;
-	return x / ldexp((arg0_t) 1.0f, e);
+	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
+	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
+	int_t e = (absBits >> 23) - 126;
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
+	*exp = specialCase ? (int_t)0 : e;
+	return specialCase ? x : vc4cl_bitcast_float(tmp);
 })
 COMPLEX_2(float, frexp, float, x, __local int, *exp, {
-	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
-	int_t e = ilogb(x);
-	*exp = e;
-	return x / ldexp((arg0_t) 1.0f, e);
+	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
+	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
+	int_t e = (absBits >> 23) - 126;
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
+	*exp = specialCase ? (int_t)0 : e;
+	return specialCase ? x : vc4cl_bitcast_float(tmp);
 })
 COMPLEX_2(float, frexp, float, x, __private int, *exp, {
-	// adapted from pocl: https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/frexp.cl
-	int_t e = ilogb(x);
-	*exp = e;
-	return x / ldexp((arg0_t) 1.0f, e);
+	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
+	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
+	int_t e = (absBits >> 23) - 126;
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
+	*exp = specialCase ? (int_t)0 : e;
+	return specialCase ? x : vc4cl_bitcast_float(tmp);
 })
 
 /**
@@ -736,20 +750,34 @@ COMPLEX_2(float, frexp, float, x, __private int, *exp, {
  */
 SIMPLE_2(float, hypot, float, x, float, y, sqrt(x *x + y * y))
 
+/**
+ * Expected behavior (C99 standard):
+ *
+ * ilogb(0) = FP_ILOGB0
+ * ilogb(+-Inf) = INT_MAX
+ * ilogb(+-NaN) = FP_ILOGBNAN
+ */
 COMPLEX_1(int, ilogb, float, x, {
 	//"Return the exponent as an integer value."
 	// https://en.wikipedia.org/wiki/Single-precision_floating-point_format
 	result_t bitcast = vc4cl_bitcast_int(x);
 	// deduct exponent offset
-	return ((bitcast >> 23) & 0xFF) - 127;
+	int_t result = ((bitcast >> 23) & 0xFF) - 127;
+	result = vc4cl_is_zero(x) ? (result_t)FP_ILOGB0 : result;
+	result = isinf(x) ? (result_t)INT_MAX : result;
+	return isnan(x) ? (result_t)FP_ILOGBNAN : result;
 })
 
 //"Multiply x by 2 to the power k."
-// TODO rewrite, use bit-trickery: x * 2^k = Mx * 2^(Ex + k)
-// TODO this version is wrong for |exponents > 31|
-// TODO have a look at https://gitlab.freedesktop.org/anholt/mesa/blob/f73a16727358c943dec239725a1bf2335f611b6a/src/compiler/nir/nir_opt_algebraic.py#L800
-SIMPLE_2(
-	float, ldexp, float, x, int, k, x *(k >= 0 ? vc4cl_itof((arg1_t)(1) << k) : 1.0f / vc4cl_itof((arg1_t)(1) << -k)))
+COMPLEX_2(float, ldexp, float, x, int, k, {
+	// Taken from MESA (https://gitlab.freedesktop.org/mesa/mesa/-/blob/master/src/compiler/nir/nir_opt_algebraic.py)
+	// Alternatively in https://git.musl-libc.org/cgit/musl/tree/src/math/scalbnf.c
+	int_t exp = min(max(k, -254), 254);
+	int_t pow2_1 = ((exp >> 1) + 127) << 23;
+	int_t pow2_2 = ((exp - (exp >> 1)) + 127) << 23;
+	result_t result = x * vc4cl_bitcast_float(pow2_1) * vc4cl_bitcast_float(pow2_2);
+	return isnan(x) ? x : result;
+})
 SIMPLE_2_SCALAR(float, ldexp, float, x, int, k, x *(k >= 0 ? vc4cl_itof(1 << k) : 1.0f / vc4cl_itof(1 << -k)))
 
 /**
@@ -1007,8 +1035,15 @@ SIMPLE_1(float, log1p, float, x, log(1.0f + x))
  * logb(+-0) = -Inf
  * logb(+-Inf) = +Inf
  */
-// TODO correct?
-SIMPLE_1(float, logb, float, x, vc4cl_itof(ilogb(x)))
+COMPLEX_1(float, logb, float, x, {
+	int_t bitcast = vc4cl_bitcast_int(x);
+	// deduct exponent offset
+	int_t exponent = ((bitcast >> 23) & 0xFF) - 127;
+	result_t result = vc4cl_itof(exponent);
+	result = vc4cl_is_zero(x) ? (result_t)-INFINITY : result;
+	result = isinf(x) ? fabs(x) : result;
+	return isnan(x) ? x : result;
+})
 
 SIMPLE_3(float, mad, float, a, float, b, float, c, (a * b) + c)
 
@@ -1034,10 +1069,25 @@ COMPLEX_2(float, minmag, float, x, float, y, {
  * modf(+-Inf, iptr) = +-0, iptr = +-Inf
  * modf(NaN, iptr) = NaN, iptr = NaN
  */
-// taken from pocl (https://github.com/pocl/pocl/blob/master/lib/kernel/vecmathlib-pocl/modf.cl)
-SIMPLE_2(float, modf, float, x, __global float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x), x)))
-SIMPLE_2(float, modf, float, x, __local float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x), x)))
-SIMPLE_2(float, modf, float, x, __private float, *iptr, (*iptr = trunc(x), copysign(x - trunc(x), x)))
+// taken OpenCL C 1.2 specification, 7.5.2. Changes to C99 TC2 Behavior
+COMPLEX_2(float, modf, float, value, __global float, *iptr, {
+	result_t tmp = trunc(value);
+	*iptr = isnan(value) ? value : tmp;
+	result_t result = copysign(isinf(value) ? (result_t)0.0f : value - tmp, value);
+	return isnan(value) ? value : result;
+})
+COMPLEX_2(float, modf, float, value, __local float, *iptr, {
+	result_t tmp = trunc(value);
+	*iptr = isnan(value) ? value : tmp;
+	result_t result = copysign(isinf(value) ? (result_t)0.0f : value - tmp, value);
+	return isnan(value) ? value : result;
+})
+COMPLEX_2(float, modf, float, value, __private float, *iptr, {
+	result_t tmp = trunc(value);
+	*iptr = isnan(value) ? value : tmp;
+	result_t result = copysign(isinf(value) ? (result_t)0.0f : value - tmp, value);
+	return isnan(value) ? value : result;
+})
 
 SIMPLE_1(float, nan, uint, nancode, vc4cl_bitcast_float(NAN | nancode))
 /**
@@ -1226,23 +1276,22 @@ COMPLEX_1(float, round, float, val, {
 })
 
 COMPLEX_1(float, rsqrt, float, x, {
-	// see https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Reciprocal_of_the_square_root
-	result_t xhalf = 0.5f * x;
+	// Using Goldschmidt's algorithm with 2 iterations
+	// see http://www.informatik.uni-trier.de/Reports/TR-08-2004/rnc6_12_markstein.pdf (formula 9)
+	arg_t y = vc4cl_sfu_rsqrt(x);
+	arg_t g = x * y;
+	arg_t h = y * (arg_t)0.5f;
 
-	union {
-		result_t x;
-		int_t i;
-	} u;
-	u.x = x;
-	u.i = 0x5f3759df - (u.i >> 1);
-	/* The next line can be repeated any number of times to increase accuracy */
-	u.x = u.x * (1.5f - xhalf * u.x * u.x);
-	u.x = u.x * (1.5f - xhalf * u.x * u.x);
-	u.x = u.x * (1.5f - xhalf * u.x * u.x);
-	u.x = u.x * (1.5f - xhalf * u.x * u.x);
+	for(unsigned i = 0; i < 2; ++i) {
+		arg_t r = (arg_t)0.5f - g * h;
+		g = g + g * r;
+		h = h + h * r;
+	}
 
+	// rsqrt(+-0) = +-Inf
+	result_t result = vc4cl_is_zero(x) ? copysign((result_t)INFINITY, x) : (arg_t)2.0f * h;
 	// rsqrt(NaN) = NaN
-	result_t result = isnan(x) ? x : u.x;
+	result = isnan(x) ? x : result;
 	// rsqrt(Inf) = 0
 	result = isinf(x) ? (result_t)0.0f : result;
 	// rsqrt(x) for x < 0 = -NaN
@@ -1428,37 +1477,25 @@ COMPLEX_1(float, sinh, float, val, {
  */
 SIMPLE_1(float, sinpi, float, val, sin(val *M_PI_F))
 
-COMPLEX_1(float, sqrt, float, val, {
-	/*
-	// comparison of 14 algorithms:
-	// https://www.codeproject.com/articles/69941/best-square-root-method-algorithm-function-precisi
-	// https://en.wikipedia.org/wiki/Methods_of_computing_square_roots#Taylor_series
-	const result_t N = native_sqrt(val);
-	const result_t d = val - N * N;
-	const result_t recipN = 1.0f / N;
+COMPLEX_1(float, sqrt, float, x, {
+	// Using Goldschmidt's algorithm with 2 iterations
+	// see http://www.informatik.uni-trier.de/Reports/TR-08-2004/rnc6_12_markstein.pdf (formula 9)
+	arg_t y = vc4cl_sfu_rsqrt(x);
+	arg_t g = x * y;
+	arg_t h = y * (arg_t)0.5f;
 
-	result_t x = N + d * 1.0f / 2.0f * recipN;
-	x = x - d * d * 1.0f / 8.0f * recipN * recipN * recipN;
-	x = x + d * d * d * 1.0f / 16.0f * recipN * recipN * recipN * recipN * recipN;
-	x = x - 5 * d * d * d * d * 1.0f / 128.0f * recipN * recipN * recipN * recipN * recipN * recipN * recipN;
-	x = x +
-		7 * d * d * d * d * d * 1.0f / 256.0f * recipN * recipN * recipN * recipN * recipN * recipN * recipN * recipN *
-			recipN;
-	x = x -
-		21 * d * d * d * d * d * d * 1.0f / 1024.0f * recipN * recipN * recipN * recipN * recipN * recipN * recipN *
-			recipN * recipN * recipN * recipN;
+	for(unsigned i = 0; i < 2; ++i) {
+		arg_t r = (arg_t)0.5f - g * h;
+		g = g + g * r;
+		h = h + h * r;
+	}
 
-	// TODO with 7 steps, this has an maximum error of ~0 for values > 0.5, but for |x| < 0.04 it exceeds the error
-	// of 4.7*10-7 from the OpenCL standard
-
-	return val == 0.0f ? (result_t) 0.0f : x;
-	*/
-
-	// The above algorithm is too inaccurate, but the following line is accurate enough and not too expensive to calculate
-	// sqrt(x) = x / sqrt(x) = x * rsqrt(x)
-	result_t result = val == 0.0f ? (result_t) 0.0f : (val * rsqrt(val));
-	result = isnan(val) ? val : result;
-	return val < 0.0f ? (result_t)nan(0) : result;
+	// sqrt(NaN) = NaN, sqrt(Inf) = Inf
+	result_t result = vc4cl_is_inf_nan(x) ? x : g;
+	// sqrt(+-0) = +-0
+	result = vc4cl_is_zero(x) ? x : result;
+	// sqrt(x) = NaN, for x < 0
+	return x < 0.0f ? (result_t)nan(0) : result;
 })
 
 /**
