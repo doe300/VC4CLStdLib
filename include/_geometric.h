@@ -54,7 +54,20 @@ INLINE float dot(float4 p0, float4 p1) OVERLOADABLE CONST
 float dot(float8 p0, float8 p1) OVERLOADABLE CONST;
 float dot(float16 p0, float16 p1) OVERLOADABLE CONST;
 
-SIMPLE_1_RETURN_SCALAR(float, length, float, p, sqrt(dot(p, p)))
+COMPLEX_1_RETURN_SCALAR(float, length, float, p, {
+	float tmp = dot(p, p);
+
+	// To mitigate overflow errors for edge-cases, reduce large/increase small numbers, this is taken from LLVM libclc
+	// E.g. since dot(x, x) calculates element-wise x^2, every exponent >= 64 goes to Infinity and every exponent <= -64 to zero!
+	float inputFactor = 1.0f;
+	float outputFactor = 1.0f;
+	outputFactor = tmp == INFINITY ? 0x1.0p+65f : outputFactor;
+	inputFactor = tmp == INFINITY ? 0x1.0p-65f : inputFactor;
+	outputFactor = vc4cl_is_zero(tmp) ? 0x1.0p-86f : outputFactor;
+	inputFactor = vc4cl_is_zero(tmp) ? 0x1.0p+86f : inputFactor;
+
+	return sqrt(dot(p * inputFactor, p * inputFactor)) * outputFactor;
+})
 
 //"Returns the distance between p0 and p1.
 // This is calculated as length(p0 - p1).

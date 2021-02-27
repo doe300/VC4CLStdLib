@@ -7,8 +7,8 @@
 #ifndef VC4CL_WORK_ITEMS_H
 #define VC4CL_WORK_ITEMS_H
 
-#include "_overloads.h"
 #include "_intrinsics.h"
+#include "_overloads.h"
 
 INLINE uint get_work_dim(void) OVERLOADABLE CONST
 {
@@ -28,6 +28,13 @@ INLINE size_t get_global_id(uint dim) OVERLOADABLE CONST
 INLINE size_t get_local_size(uint dim) OVERLOADABLE CONST
 {
 	return vc4cl_local_size(dim);
+}
+
+INLINE size_t get_enqueued_local_size(uint dimindx) OVERLOADABLE CONST
+{
+	// "Returns the same value as that returned by get_local_size(dimindx) if the kernel is executed with a uniform
+	// work-group size."
+	return vc4cl_local_size(dimindx);
 }
 
 INLINE size_t get_local_id(uint dim) OVERLOADABLE CONST
@@ -50,5 +57,17 @@ INLINE size_t get_global_offset(uint dim) OVERLOADABLE CONST
 	return vc4cl_global_offset(dim);
 }
 
-#endif /* VC4CL_WORK_ITEMS_H */
+INLINE size_t get_global_linear_id() OVERLOADABLE CONST
+{
+	return ((vc4cl_global_id(2) - vc4cl_global_offset(2)) * vc4cl_global_size(1) * vc4cl_global_size(0)) +
+		((vc4cl_global_id(1) - vc4cl_global_offset(1)) * vc4cl_global_size(0)) +
+		(vc4cl_global_id(0) - vc4cl_global_offset(0));
+}
 
+INLINE size_t get_local_linear_id() OVERLOADABLE CONST
+{
+	return (vc4cl_local_id(2) * vc4cl_local_size(1) * vc4cl_local_size(0)) + (vc4cl_local_id(1) * vc4cl_local_size(0)) +
+		vc4cl_local_id(0);
+}
+
+#endif /* VC4CL_WORK_ITEMS_H */
