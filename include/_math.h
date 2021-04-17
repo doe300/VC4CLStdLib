@@ -713,32 +713,55 @@ COMPLEX_2(float, fract, float, val, __private float, *iptr, {
 COMPLEX_2(float, frexp, float, x, __global int, *exp, {
 	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
 	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
-	int_t e = (absBits >> 23) - 126;
+	int_t exponent = ((absBits >> 23) & 0xFF) - 126;
+	// we need to support subnormals here, since they are only used as input, not output
+	int_t mantissa = absBits & (int_t) 0x007FFFFF;
+	int_t subnormalExpOffset = (vc4cl_clz(mantissa) - (32 - 23));
+	// the next lines are required to fix-up the mantissa for our added subnormal exponent
+	int_t subnormalExpOffsetLog2 = 33 - vc4cl_clz(subnormalExpOffset);
+	mantissa = mantissa << (exponent == -126 ? subnormalExpOffsetLog2 : 0);
+	exponent = exponent == -126 ? -subnormalExpOffset  - 126 : exponent;
 	/* mask off exponent and replace with exponent for range [0.5, 1) */
-	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t tmp = mantissa | (int_t)0x3F000000;
 	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
-	*exp = specialCase ? (int_t)0 : e;
-	return specialCase ? x : vc4cl_bitcast_float(tmp);
+	*exp = specialCase ? (int_t)0 : exponent;
+	return specialCase ? x : copysign(vc4cl_bitcast_float(tmp), x);
 })
+
 COMPLEX_2(float, frexp, float, x, __local int, *exp, {
 	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
 	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
-	int_t e = (absBits >> 23) - 126;
+	int_t exponent = ((absBits >> 23) & 0xFF) - 126;
+	// we need to support subnormals here, since they are only used as input, not output
+	int_t mantissa = absBits & (int_t) 0x007FFFFF;
+	int_t subnormalExpOffset = (vc4cl_clz(mantissa) - (32 - 23));
+	// the next lines are required to fix-up the mantissa for our added subnormal exponent
+	int_t subnormalExpOffsetLog2 = 33 - vc4cl_clz(subnormalExpOffset);
+	mantissa = mantissa << (exponent == -126 ? subnormalExpOffsetLog2 : 0);
+	exponent = exponent == -126 ? -subnormalExpOffset  - 126 : exponent;
 	/* mask off exponent and replace with exponent for range [0.5, 1) */
-	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t tmp = mantissa | (int_t)0x3F000000;
 	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
-	*exp = specialCase ? (int_t)0 : e;
-	return specialCase ? x : vc4cl_bitcast_float(tmp);
+	*exp = specialCase ? (int_t)0 : exponent;
+	return specialCase ? x : copysign(vc4cl_bitcast_float(tmp), x);
 })
+
 COMPLEX_2(float, frexp, float, x, __private int, *exp, {
 	// Adapted from https://git.musl-libc.org/cgit/musl/tree/src/math/frexpf.c
 	int_t absBits = vc4cl_bitcast_int(x) & (int_t)0x7FFFFFFF;
-	int_t e = (absBits >> 23) - 126;
+	int_t exponent = ((absBits >> 23) & 0xFF) - 126;
+	// we need to support subnormals here, since they are only used as input, not output
+	int_t mantissa = absBits & (int_t) 0x007FFFFF;
+	int_t subnormalExpOffset = (vc4cl_clz(mantissa) - (32 - 23));
+	// the next lines are required to fix-up the mantissa for our added subnormal exponent
+	int_t subnormalExpOffsetLog2 = 33 - vc4cl_clz(subnormalExpOffset);
+	mantissa = mantissa << (exponent == -126 ? subnormalExpOffsetLog2 : 0);
+	exponent = exponent == -126 ? -subnormalExpOffset  - 126 : exponent;
 	/* mask off exponent and replace with exponent for range [0.5, 1) */
-	int_t tmp = (vc4cl_bitcast_int(x) & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	int_t tmp = mantissa | (int_t)0x3F000000;
 	int_t specialCase = vc4cl_is_zero(x) || vc4cl_is_inf_nan(x);
-	*exp = specialCase ? (int_t)0 : e;
-	return specialCase ? x : vc4cl_bitcast_float(tmp);
+	*exp = specialCase ? (int_t)0 : exponent;
+	return specialCase ? x : copysign(vc4cl_bitcast_float(tmp), x);
 })
 
 /**
@@ -880,38 +903,6 @@ COMPLEX_1(float, log1p_pade, float, val, {
 	return up / down;
 })
 
-//    COMPLEX_1(float, log2, float, val,
-//    {
-//		//see https://en.wikipedia.org/wiki/Binary_logarithm#Calculation
-//		//alternative: http://www.ebaytechblog.com/2015/05/01/fast-approximate-logarithms-part-i-the-basics/
-//        //log2(x) = log2(m * 2^base) = base + log2(m)
-//
-//        //characteristic = log2(2^base)
-//        const result_t characteristic = vc4cl_itof(ilogb(val));
-//        const result_t expCharacteristic = native_exp2(characteristic);
-//
-//        const result_t expStep1 = val / expCharacteristic;
-//        const result_t step1 = native_log2(expStep1);
-//
-//        const result_t expStep2 = val / (expCharacteristic * expStep1);
-//        const result_t step2 = native_log2(expStep2);
-//
-//        const result_t expStep3 = val / (expCharacteristic * expStep1 * expStep2);
-//        const result_t step3 = native_log2(expStep3);
-//
-//        const result_t expStep4 = val / (expCharacteristic * expStep1 * expStep2 * expStep3);
-//        const result_t step4 = native_log2(expStep4);
-//
-//
-//        const result_t expStep5 = val / (expCharacteristic * expStep1 * expStep2 * expStep3 * expStep4);
-//        const result_t step5 = native_log2(expStep5);
-//
-//        //TODO correct??
-//        //TODO how many steps??
-//
-//        return characteristic + step1 + step2 + step3 + step4 + step5;
-//    })
-
 /**
  * Expected behavior:
  *
@@ -920,37 +911,39 @@ COMPLEX_1(float, log1p_pade, float, val, {
  * log2(x) = Nan for x < 0
  * log2(+Inf) = +Inf
  */
-// TODO alternatively could calculate as log2(M * 2^E) = log2(M) + E
-// with log2(M) = native_log2(M1) + native_log2(M2) + ... (until exact enough),
-// TODO would need to find factors M1, M2, ... of M!!
-SIMPLE_1(float, log2, float, val, log(val) * (1.0f / M_LN2_F))
+COMPLEX_1(float, log2, float, val, {
 
-/*
- * Matters computational (sections 32.1.1 and 32.1.3)
- *
- * Using Pade-approximants with argument reduction
- *
- * 1) log(M * 2^E) = log(M) + E log(2)
- * 2) log(M) = log(M s^f) - f log(s), s = sqrt(2)
- */
-//	COMPLEX_1(float, log, float, val,
-//	{
-//		//alternatives:
-// https://math.stackexchange.com/questions/977586/is-there-an-approximation-to-the-natural-log-function-at-large-values
-//		/* extract mantissa, set exponent to 2^0 -> 127, keep sign */
-//		result_t M = vc4cl_bitcast_float((vc4cl_bitcast_uint(val) & 0xFFFFFFU) | 0x3FC00000U);
-//		M = copysign(M, val);
-//		/* deduct M by 1, since the Pade approximation calculates ln(x+1) */
-//		M -= 1.0f;
-//		/* M is in [0, 1[ */
-//		result_t logE = vc4cl_itof(ilogb(val)) * M_LN2_F;
-//
-//		/* calculate logM via Pade approximants */
-//		result_t logM = (60 * M + 60 * M * M + 11 * M * M * M) / (60 + 90 * M + 36 * M * M + 3 * M * M * M);
-//		//TODO correct??
-//
-//		return logM + logE;
-//	})
+	/* log2(x) = log2(M * e^E) = E + log2(M) */
+	int_t bitcast = vc4cl_bitcast_int(val);
+	/* deduct exponent offset, we use -126 instead of -127, since we go into the range [0.5, 1), not [1, 2) */
+	int_t exponent = ((bitcast >> 23) & 0xFF) - 126;
+
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (bitcast & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	arg_t mantissa = vc4cl_bitcast_float(tmp);
+
+	/*
+	 * Alternatively could use SFU and Newton-Raphson steps:
+	 * f(x) = log2(x) - y
+	 * root: f(x) = 0 -> log2(x) = y
+	 * f'(x) = 1/(x * ln(2))
+	 * xn+1 = xn - (log2(xn) - y) / (1/(xn * ln(2)))
+	 * xn+1 = xn - xn * ln(2) * (log2(x) - y)
+	 * => but don't know y which is exact log2(x)!!!
+	 *
+	 * Alternatively could approximate root of: f(y) = 2^y - x, need exact exp2(x)
+	 */
+	// result_t logMantissa = vc4cl_sfu_log2(mantissa);
+
+	// log2(M*2^E) = E + log2(M) = E + ln(M) / ln(2) = E + ln1p(M - 1) / ln(2)
+	result_t logMantissa = log1p_pade(mantissa - 1.0f) / M_LN2_F;
+
+	result_t result = vc4cl_itof(exponent) + logMantissa;
+	result = vc4cl_is_inf_nan(val) ? val : result;
+	result = signbit(val) ? (result_t)nan(0) : result;
+	result = vc4cl_is_zero(val) ? (result_t)-INFINITY: result;
+	return result;
+})
 
 /**
  * Expected behavior:
@@ -959,39 +952,36 @@ SIMPLE_1(float, log2, float, val, log(val) * (1.0f / M_LN2_F))
  * log(1) = 0
  * log(x) = Nan for x < 0
  * log(+Inf) = +Inf
- *
- * Taylor series (https://en.wikipedia.org/wiki/Natural_logarithm#Derivative.2C_Taylor_series)
- *
- * Has a maximum error of 4.1 * 10^7 (at x ~ 1.329*10^36 (x = 2^120))
- * and an maximum allowed relative error of 4.7 * 10^-7
  */
 COMPLEX_1(float, log, float, val, {
+	/*
+	 * Other sources/calculations:
+	 * - Matters computational (sections 32.1.1 and 32.1.3)
+	 * - https://math.stackexchange.com/questions/977586/is-there-an-approximation-to-the-natural-log-function-at-large-values
+	 * - https://math.stackexchange.com/questions/1382070/iterative-calculation-of-log-x
+	 * - https://evoq-eval.siam.org/Portals/0/Publications/SIURO/Vol7/New_Method_for_Approximating_Logarithms.pdf?ver=2018-04-06-151916-493
+	 * - https://cs.stackexchange.com/questions/91185/compute-ex-given-starting-approximation
+	 * - https://shoueiko.wordpress.com/2017/05/01/approximation-of-log-2/
+	 * - https://math.stackexchange.com/questions/3381629/what-is-the-fastest-algorithm-for-finding-the-natural-logarithm-of-a-big-number
+	 */
+
 	/* log(M * 2^E) = log(M) + E log(2) */
-	result_t logE = vc4cl_itof(ilogb(val)) * M_LN2_F;
+	int_t bitcast = vc4cl_bitcast_int(val);
+	/* deduct exponent offset, we use -126 instead of -127, since we go into the range [0.5, 1), not [1, 2) */
+	int_t exponent = ((bitcast >> 23) & 0xFF) - 126;
 
-	/* extract mantissa, set exponent to 2^0 -> 127, keep sign */
-	result_t M = vc4cl_bitcast_float((vc4cl_bitcast_uint(val) & 0xFFFFFFU) | 0x3FC00000U);
-	M = copysign(M, val);
-	/* move from range [1, 2[ to [0, 1[ */
-	/* M/2 instead of M - 1 is on purpose! */
-	M /= 2.0f;
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (bitcast & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	arg_t mantissa = vc4cl_bitcast_float(tmp);
 
-	/* approximate log(M) in [0, 1[ via Taylor-series with 17 steps */
-	result_t logM = 0.0f;
-	result_t MpowN = M - 1.0f;
-	for(uint n = 1; n < 18; ++n)
-	{
-		/* ((−1)^(n+1))/n * (x−1)^n */
-		logM += (((n % 2 == 1) ? +1.0f : -1.0f) / (result_t) n) * MpowN;
-		MpowN *= M - 1.0f;
-	}
+	result_t logMantissa = log1p_pade(mantissa - 1.0f);
 
-	/* fix offset from log(M/2) to log(M) with adding log(2) */
-	return logE + logM + M_LN2_F;
+	result_t result = vc4cl_itof(exponent) * M_LN2_F + logMantissa;
+	result = vc4cl_is_inf_nan(val) ? val : result;
+	result = signbit(val) ? (result_t)nan(0) : result;
+	result = vc4cl_is_zero(val) ? (result_t)-INFINITY: result;
+	return result;
 })
-
-// log(x) = log2(x) / log2(e)
-// SIMPLE_1(float, log, float, x, log2(x) * (1.0f / M_LOG2E_F))
 
 /**
  * Expected behavior:
@@ -1000,32 +990,26 @@ COMPLEX_1(float, log, float, val, {
  * log10(1) = 0
  * log10(x) = Nan for x < 0
  * log10(+Inf) = +Inf
- *
- *
- * Handbook of Mathematical Functions (pages 67, 68)
- *
- * Using polynomial approximation with argument reduction
- *
- * - log10(M * 2^E) = log10(M) + E log10(2)
  */
 COMPLEX_1(float, log10, float, val, {
-	// TODO this (and all logarithmic approximations) are inaccurate for most floats (e.g. 500+)
-	// by ~sqrt(2) in input (e.g. thisLog10(x) ~= realLog(x + sqrt(2)) ?!?!
-
 	/* log10(M * 2^E) = log10(M) + E log10(2) */
-	result_t logE = vc4cl_itof(ilogb(val)) * 0.3010300099849700927734375f;
+	int_t bitcast = vc4cl_bitcast_int(val);
+	/* deduct exponent offset, we use -126 instead of -127, since we go into the range [0.5, 1), not [1, 2) */
+	int_t exponent = ((bitcast >> 23) & 0xFF) - 126;
 
-	/* extract mantissa, set exponent to 2^0 -> 127, keep sign */
-	result_t M = vc4cl_bitcast_float((vc4cl_bitcast_uint(val) & 0xFFFFFFU) | 0x3FC00000U);
-	M = copysign(M, val);
-	/* M is now in [1, 2[, which is in the range for the approximation [1/sqrt(10), sqrt(10)] */
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (bitcast & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	arg_t mantissa = vc4cl_bitcast_float(tmp);
 
-	/* approximate log10(M) in [1, 2[ via polynomial approximation */
-	result_t t = (M - 1) / (M + 1);
-	result_t logM = 0.868591718f * t + 0.289335524f * t * t * t + 0.177522071f * t * t * t * t * t +
-		0.094376476f * t * t * t * t * t * t * t + 0.191337714f * t * t * t * t * t * t * t * t * t;
+	/* log10(M) = log(M) / log(10) */
+	result_t logMantissa = log1p_pade(mantissa - 1.0f) / M_LN10_F;
 
-	return logE + logM;
+	const arg_t log2_10 = M_LN2_F / M_LN10_F;
+	result_t result = vc4cl_itof(exponent) * log2_10 + logMantissa;
+	result = vc4cl_is_inf_nan(val) ? val : result;
+	result = signbit(val) ? (result_t)nan(0) : result;
+	result = vc4cl_is_zero(val) ? (result_t)-INFINITY: result;
+	return result;
 })
 
 /**
@@ -1189,10 +1173,22 @@ SIMPLE_2(float, pown, float, x, int, n,
 // x^y = e^(y * ln(x))
 SIMPLE_2(float, powr, float, x, float, y, exp(y *log(x)))
 
+/**
+ * Expected behavior:
+ *
+ * remainder(x, 0) = NaN or 0
+ * remainder(Inf, y) = NaN
+ * remainder(x, Inf) = x
+ */
 COMPLEX_2(float, remainder, float, x, float, y, {
 	// TODO correct?
 	result_t k = rint(x / y);
-	return x - k * y;
+	result_t result = x - k * y;
+
+	result = vc4cl_is_zero(y) ? (result_t)-nan(0) : result;
+	result = isinf(x) ? (result_t)nan(0) : result;
+	result = isnan(x) ? x : result;
+	return isnan(y) ? y : result;
 })
 
 /**
@@ -1605,7 +1601,7 @@ SIMPLE_1(float, native_rsqrt, float, val, vc4cl_sfu_rsqrt(val))
 
 SIMPLE_1(float, native_sin, float, val, sin(val))
 
-SIMPLE_1(float, native_sqrt, float, val, val * native_rsqrt(val))
+SIMPLE_1(float, native_sqrt, float, val, val * vc4cl_sfu_rsqrt(val))
 
 SIMPLE_1(float, native_tan, float, val, tan(val))
 
@@ -1613,18 +1609,62 @@ SIMPLE_1(float, native_tan, float, val, tan(val))
  * half functions, accuracy of 8192 ULP (11 MSB of the mantissa)
  */
 SIMPLE_1(float, half_cos, float, val, cos(val))
-SIMPLE_2(float, half_divide, float, x, float, y, native_divide(x, y))
+SIMPLE_2(float, half_divide, float, x, float, y, x * vc4cl_sfu_recip(y))
 SIMPLE_1(float, half_exp, float, val, native_exp(val))
-SIMPLE_1(float, half_exp2, float, val, native_exp2(val))
+COMPLEX_1(float, half_exp2, float, val, {
+	result_t result = vc4cl_sfu_exp2(val);
+
+	result = vc4cl_is_zero(val) ? (result_t)1.0f : result;
+	result = val < (result_t)-126.0f ? (result_t)0.0f : result;
+	result = val >= (result_t)128.0f ? (result_t)INFINITY : result;
+	return isnan(val) ? val : result;
+})
 SIMPLE_1(float, half_exp10, float, val, native_exp10(val))
 SIMPLE_1(float, half_log, float, val, native_log(val))
-SIMPLE_1(float, half_log2, float, val, native_log2(val))
+COMPLEX_1(float, half_log2, float, val, {
+	/* log2(x) = log2(M * e^E) = E + log2(M) */
+	int_t bitcast = vc4cl_bitcast_int(val);
+	/* deduct exponent offset, we use -126 instead of -127, since we go into the range [0.5, 1), not [1, 2) */
+	int_t exponent = ((bitcast >> 23) & 0xFF) - 126;
+
+	/* mask off exponent and replace with exponent for range [0.5, 1) */
+	int_t tmp = (bitcast & (int_t)0x807FFFFF) | (int_t)0x3F000000;
+	arg_t mantissa = vc4cl_bitcast_float(tmp);
+	result_t logMantissa = vc4cl_sfu_log2(mantissa);
+
+	result_t result = vc4cl_itof(exponent) + logMantissa;
+	result = vc4cl_is_inf_nan(val) ? val : result;
+	result = signbit(val) ? (result_t)nan(0) : result;
+	result = vc4cl_is_zero(val) ? (result_t)-INFINITY: result;
+	return result;
+})
 SIMPLE_1(float, half_log10, float, val, native_log10(val))
 SIMPLE_2(float, half_powr, float, x, float, y, powr(x, y))
-SIMPLE_1(float, half_recip, float, val, native_recip(val))
-SIMPLE_1(float, half_rsqrt, float, val, native_rsqrt(val))
+SIMPLE_1(float, half_recip, float, val, (arg_t)1.0f / val)
+COMPLEX_1(float, half_rsqrt, float, val, {
+	arg_t x = vc4cl_sfu_rsqrt(val);
+
+	// rsqrt(+-0) = +-Inf
+	result_t result = vc4cl_is_zero(val) ? copysign((result_t)INFINITY, val) : x;
+	// rsqrt(NaN) = NaN
+	result = isnan(val) ? val : result;
+	// rsqrt(Inf) = 0
+	result = isinf(val) ? (result_t)0.0f : result;
+	// rsqrt(x) for x < 0 = -NaN
+	result = val < (result_t)0.0f ? copysign((result_t)nan(0), -1.0f) : result;
+	return result;
+})
 SIMPLE_1(float, half_sin, float, val, sin(val))
-SIMPLE_1(float, half_sqrt, float, val, sqrt(val))
+COMPLEX_1(float, half_sqrt, float, val, {
+	arg_t x = val * vc4cl_sfu_rsqrt(val);
+
+	// sqrt(NaN) = NaN, sqrt(Inf) = Inf
+	result_t result = vc4cl_is_inf_nan(val) ? val : x;
+	// sqrt(+-0) = +-0
+	result = vc4cl_is_zero(val) ? val : result;
+	// sqrt(x) = NaN, for x < 0
+	return val < 0.0f ? (result_t)nan(0) : result;
+})
 SIMPLE_1(float, half_tan, float, val, tan(val))
 
 #endif /* VC4CL_MATH_H */
