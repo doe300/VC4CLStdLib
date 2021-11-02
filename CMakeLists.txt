@@ -8,7 +8,11 @@ option(BUILD_DEB_PACKAGE "Enables creating .deb package" ON)
 # Option whether to compile for raspberry-pi (default: ON, for the compatibility)
 option(CROSS_COMPILE "Cross compile for Raspbian" ON)
 
-project(VC4CLStdLib VERSION 0.4)
+if(NOT BUILD_NUMBER)
+	set(BUILD_NUMBER 9999)
+endif()
+
+project(VC4CLStdLib VERSION 0.4.${BUILD_NUMBER})
 
 
 #Include headers in the project structure
@@ -44,7 +48,7 @@ if (BUILD_DEB_PACKAGE)
         endif()
 	set(CPACK_PACKAGE_VENDOR "doe300")
 	set(CPACK_PACKAGE_CONTACT "doe300@web.de")
-	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenCL C headers for the VC4CL implementation (rasberrypi only)")
+	set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "OpenCL C headers for the VC4CL implementation (raspberrypi only)")
 	set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/doe300/VC4CLStdLib")
 	set(CPACK_PACKAGE_FILE_NAME "vc4cl-stdlib-0.4-Linux")
 	include(CPack)
