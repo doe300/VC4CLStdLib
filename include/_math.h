@@ -9,6 +9,7 @@
 
 #include "_common.h"
 #include "_intrinsics.h"
+#include "_float_float.h"
 
 // TODO test-cases for all the known Edge Case Behavior
 // TODO can remove nan-check from rounding functions? The large value check should also contain NaNs,
@@ -56,6 +57,11 @@
 #undef native_sqrt // via SFU RECIP and SFU RSQRT
 #undef native_tan
 
+// vc4cl_split(double) of M_LN2
+#define M_LN2_FF 0xB102E3083F317218
+// 1 / log10(e)
+#define M_1_LOG10_E_F 2.30258512496948242188f
+
 INLINE int factorial(int n) CONST
 {
 	return (n == 1 || n == 0) ? 1 : factorial(n - 1) * n;
@@ -73,6 +79,14 @@ COMPLEX_3_SCALAR(float, fast_pown, float, val, uint, n, uchar, width, {
 		tmp = tmp * tmp;
 	}
 	return result;
+})
+
+COMPLEX_1(float, vc4cl_pow2, int, val, {
+	// y = 2^x = 1.0 [implied] * 2^(x + offset)
+	int_t tmp = val << 23;
+	// alternative: tmp = (val + 127) << 23;
+	tmp += (int_t) 0x3F800000;
+	return vc4cl_bitcast_float(tmp & (int_t) 0x7F800000);
 })
 
 /**
@@ -484,64 +498,47 @@ COMPLEX_1(float, erf, float, x, {
  * exp(-Inf) = 0
  * exp(+Inf) = +Inf
  *
- * Matters computational (sections 32.2.2.2 and 32.2.3)
+ * Chebyshev interpolation with monomial basis and range reduction,
  *
- * Pade Approximation (16 steps): (1680 + 840x + 180 x^2 + 20 x^3 + x^4) / (1680 - 840 x + 180 x^2 - 20 x^3 + x^4)
- *
- * with previous argument reduction
+ * https://www.pseudorandom.com/implementing-exp#section-18
  */
 COMPLEX_1(float, exp, float, val, {
-	// TODO bad accurracy for negative exponents < -22
-	// -> need to find a way to skip argument reduction for negative exponents
-	// TODO accuracy generally too bad
 
-	uint n = 16;
-	result_t r = val / (result_t)(1 << n);
-	result_t E = ((1680.0f + 840.0f * r + 180.0f * r * r + 20.0f * r * r * r + r * r * r * r) /
-					 (1680.0f - 840.0f * r + 180.0f * r * r - 20.0f * r * r * r + r * r * r * r)) -
-		1;
-	for(uint i = 0; i < n; ++i)
-		E = 2 * E + E * E;
-	return E + 1;
+	arg_t positive = fabs(val);
+
+	// range reduction: e^x = 2^k * e^r [with x = r + k * log2(x)]
+
+	// Use floor() instead of ceil() to not reach Inf later on for e^(~10^38)
+	int_t k = vc4cl_ftoi((positive / M_LN2_F) - 0.5f);
+	arg_t kFloat = vc4cl_itof(k);
+	// calculate in extended precision to reduce rounding error
+	arg_t r = vc4cl_lossy(vc4cl_sub(vc4cl_extend(positive), vc4cl_mul(vc4cl_extend(kFloat), M_LN2_FF)));
+
+	arg_t pn = 1.143364767943110e-11;
+
+	pn = pn * r + 1.632461784798319e-10f;
+	pn = pn * r + 2.088459690899721e-9f;
+	pn = pn * r + 2.504861486483735e-8f;
+	pn = pn * r + 2.755715675968011e-7f;
+	pn = pn * r + 2.755734045527853e-6f;
+	pn = pn * r + 2.480158866546844e-5f;
+	pn = pn * r + 1.984126978734782e-4f;
+	pn = pn * r + 0.001388888888388f;
+	pn = pn * r + 0.008333333333342f;
+	pn = pn * r + 0.041666666666727f;
+	pn = pn * r + 0.166666666666680f;
+	pn = pn * r + 0.500000000000002f;
+	pn = pn * r + 1.000000000000000f;
+	pn = pn * r + 1.000000000000000f;
+
+	pn = pn * vc4cl_pow2(k);
+	result_t result = val < 0 ? 1 / pn : pn;
+
+	result = vc4cl_is_zero(val) ? (result_t)1.0f : result;
+	result = val <= (result_t)-88.0f ? (result_t)0.0f : result;
+	result = val >= (result_t)89.0f ? (result_t)INFINITY : result;
+	return isnan(val) ? val : result;
 })
-
-/*
- * Taylor series (https://en.wikipedia.org/wiki/Taylor_series#Exponential_function) with argument reduction
- *
- * Argument reduction is taken from: http://www.netlib.org/fdlibm/
- *
- * Taylor series up to n=12 has very similar accuracy then the version in netlib (see link) and better accuracy than the
- * Pade-approximation (see Matters computational (sections 32.2.2.2 and 32.2.3))
- */
-// alternatives:
-// https://math.stackexchange.com/questions/1988901/approximating-the-exponential-function-with-taylor-series?rq=1 also:
-// http://www.netlib.org/fdlibm/ 	COMPLEX_1(float, exp, float, val,
-//	{
-//		/*
-//		 * e^x = e^g * 2^n
-//		 *     = e^g * e^(n * ln(2))
-//		 *     = e^(g + n * ln(2))
-//		 * -> x = g + n * ln(2)
-//		 * |g| <= 0.5* ln(2), n integer:
-//		 * n = int(x + 0.5*ln(2) / ln(2))
-//		 * g = x - n * ln(2)
-//		 */
-//		int_t n = vc4cl_ftoi((val + 0.5f * M_LN2_F) * 1.0f/ M_LN2_F);
-//		result_t g = val - vc4cl_itof(n);
-//		/*
-//		 * e^x = e^g * 2^n
-//		 * -> e^g is calculated via Taylor approximation
-//		 */
-//		result_t gPowN = 1;
-//		result_t expG = 0;
-//		for(uint n = 0; n < 13; ++n)
-//		{
-//			expG += gPowN * 1.0f / factorial(n);
-//			gPowN *= g;
-//		}
-//
-//		return ldexp(expG, n);
-//	})
 
 /**
  * Expected behavior:
@@ -550,8 +547,12 @@ COMPLEX_1(float, exp, float, val, {
  * exp2(-Inf) = 0
  * exp2(+Inf) = +Inf
  */
-// 2^x = e^(x * ln(2))
-SIMPLE_1(float, exp2, float, x, exp(x *M_LN2_F))
+
+COMPLEX_1(float, exp2, float, val, {
+	// 2^x = e^(x * ln(2))
+	result_t result = exp(val * M_LN2_F);
+	return isnan(val) ? val : result;
+})
 
 /**
  * Expected behavior:
@@ -559,28 +560,11 @@ SIMPLE_1(float, exp2, float, x, exp(x *M_LN2_F))
  * exp10(+-0) = 1
  * exp10(-Inf) = 0
  * exp10(+Inf) = +Inf
- *
- * Handbook of Mathematical Functions (pages 70, 71)
- *
- * Using polynomial approximation
  */
 COMPLEX_1(float, exp10, float, val, {
-	/* argument reduction via equivalence: e^ab = (e^a)^b */
-	/* more specific: e^(M*2^E) = (e^M)^(2^E) */
-	int_t exponent = ilogb(val);
-	result_t tmp = ldexp((arg_t) 1.0f, exponent);
-	// val = val / tmp;
-	// TODO negative exponents!
-	// TODO to apply above argument reduction, need efficient power with power of two
-	// TODO below algorithm is exact, but only for [0, 1]
-
-	/* polynomial approximation for range [0, 1] */
-	result_t approx = 1 + 1.15129277603f * val + 0.66273088429f * val * val + 0.25439357484f * val * val * val +
-		0.07295173666f * val * val * val * val + 0.01742111988f * val * val * val * val * val +
-		0.00255491796f * val * val * val * val * val * val + 0.00093264267f * val * val * val * val * val * val * val;
-
-	/*XXX re-apply exponent 2^E, approx^2 is part of the approximation */
-	return approx * approx;
+	// 10^x = e^(x / log10(e))
+	result_t result = exp(val * M_1_LOG10_E_F);
+	return isnan(val) ? val : result;
 })
 
 /**
@@ -591,7 +575,10 @@ COMPLEX_1(float, exp10, float, val, {
  * expm1(+Inf) = +Inf
  */
 // e^x - 1.0
-SIMPLE_1(float, expm1, float, x, exp(x) - 1.0f)
+COMPLEX_1(float, expm1, float, val, {
+	result_t result = exp(val) - 1.0f;
+	return isnan(val) ? val : result;
+})
 
 /**
  * Expected behavior:
@@ -963,6 +950,7 @@ COMPLEX_1(float, log, float, val, {
 	 * - https://cs.stackexchange.com/questions/91185/compute-ex-given-starting-approximation
 	 * - https://shoueiko.wordpress.com/2017/05/01/approximation-of-log-2/
 	 * - https://math.stackexchange.com/questions/3381629/what-is-the-fastest-algorithm-for-finding-the-natural-logarithm-of-a-big-number
+	 * - https://stackoverflow.com/questions/39821367/very-fast-approximate-logarithm-natural-log-function-in-c
 	 */
 
 	/* log(M * 2^E) = log(M) + E log(2) */
@@ -1015,13 +1003,21 @@ COMPLEX_1(float, log10, float, val, {
 /**
  * Expected behavior:
  *
- * log2(+-0) = +-0
- * log2(-1) = -Inf
- * log2(x) = Nan for x < -1
- * log2(+Inf) = +Inf
+ * log1p(+-0) = +-0
+ * log1p(-1) = -Inf
+ * log1p(x) = Nan for x < -1
+ * log1p(+Inf) = +Inf
  */
- //TODO use log1p_pade(), needs argument reduction
-SIMPLE_1(float, log1p, float, x, log(1.0f + x))
+//TODO directly use log1p_pade(), needs argument reduction
+COMPLEX_1(float, log1p, float, val, {
+	result_t result = log(1.0f + val);
+
+	result = vc4cl_is_zero(val) ? val : result;
+	result = val == (arg_t)-1.0f ? (result_t)-INFINITY : result;
+	result = val < (arg_t)-1.0f ? (result_t)nan(0) : result;
+	result = vc4cl_is_inf_nan(val) ? val : result;
+	return result;
+})
 
 /**
  * Expected behavior:
@@ -1356,7 +1352,7 @@ COMPLEX_1(float, sin_fast, float, x, {
 	/*
 	 * Alternative implementation, used by Mesa3D VC4 driver
 	 * - calculates the Taylor series
-	 * - 
+	 * -
 	 * https://gitlab.freedesktop.org/mesa/mesa/blob/master/src/gallium/drivers/vc4/vc4_program.c  (function ntq_fsin)
 	 */
 //})

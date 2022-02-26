@@ -1,5 +1,5 @@
 /* Declares interfaces for all intrinsic functions
- * 
+ *
  * Author: doe300
  *
  * See the file "LICENSE" for the full license governing this code.
@@ -160,19 +160,6 @@ OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global short, *ptr
 OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global uint, *ptr, size_t, num_elements)
 OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global int, *ptr, size_t, num_elements)
 OVERLOAD_2_SCALAR_RETURN_SCALAR(void, vc4cl_prefetch, const __global float, *ptr, size_t, num_elements)
-//load 32-bit scalar value(s) via TMU
-int vc4cl_tmu_read(__global int* ptr) OVERLOADABLE;
-int vc4cl_tmu_read(__local int* ptr) OVERLOADABLE;
-int2 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1) OVERLOADABLE;
-int2 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1) OVERLOADABLE;
-int3 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2) OVERLOADABLE;
-int3 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2) OVERLOADABLE;
-int4 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3) OVERLOADABLE;
-int4 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3) OVERLOADABLE;
-int8 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3, __global int* ptr4, __global int* ptr5, __global int* ptr6, __global int* ptr7) OVERLOADABLE;
-int8 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7) OVERLOADABLE;
-int16 vc4cl_tmu_read(__global int* ptr0, __global int* ptr1, __global int* ptr2, __global int* ptr3, __global int* ptr4, __global int* ptr5, __global int* ptr6, __global int* ptr7, __global int* ptr8, __global int* ptr9, __global int* ptr10, __global int* ptr11, __global int* ptr12, __global int* ptr13, __global int* ptr14, __global int* ptr15) OVERLOADABLE;
-int16 vc4cl_tmu_read(__local int* ptr0, __local int* ptr1, __local int* ptr2, __local int* ptr3, __local int* ptr4, __local int* ptr5, __local int* ptr6, __local int* ptr7, __local int* ptr8, __local int* ptr9, __local int* ptr10, __local int* ptr11, __local int* ptr12, __local int* ptr13, __local int* ptr14, __local int* ptr15) OVERLOADABLE;
 // special handling of 3-element load/store, since LLVM (compliant with the OpenCL standard) by default generates 4-element load/store
 char3 vc4cl_vload3(const __global char* ptr) OVERLOADABLE;
 char3 vc4cl_vload3(const __local char* ptr) OVERLOADABLE;

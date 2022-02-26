@@ -480,6 +480,7 @@
 		typedef argType##16 arg_t;\
 		typedef ret##16 result_t;\
 		typedef int##16 int_t; \
+		typedef float##16 float_t; \
 		content \
 	} \
 	INLINE FUNC_1(ret##8, func, argType##8, argName) \
@@ -487,6 +488,7 @@
 		typedef argType##8 arg_t;\
 		typedef ret##8 result_t;\
 		typedef int##8 int_t; \
+		typedef float##8 float_t; \
 		content \
 	} \
 	INLINE FUNC_1(ret##4, func, argType##4, argName) \
@@ -494,6 +496,7 @@
 		typedef argType##4 arg_t;\
 		typedef ret##4 result_t;\
 		typedef int##4 int_t; \
+		typedef float##4 float_t; \
 		content \
 	} \
 	INLINE FUNC_1(ret##3, func, argType##3, argName) \
@@ -501,6 +504,7 @@
 		typedef argType##3 arg_t;\
 		typedef ret##3 result_t;\
 		typedef int##3 int_t; \
+		typedef float##3 float_t; \
 		content \
 	} \
 	INLINE FUNC_1(ret##2, func, argType##2, argName) \
@@ -508,6 +512,7 @@
 		typedef argType##2 arg_t;\
 		typedef ret##2 result_t;\
 		typedef int##2 int_t; \
+		typedef float##2 float_t; \
 		content \
 	} \
 	INLINE FUNC_1(ret, func, argType, argName) \
@@ -515,6 +520,7 @@
 		typedef argType arg_t;\
 		typedef ret result_t;\
 		typedef int int_t; \
+		typedef float float_t; \
 		content \
 	}
 #endif
@@ -568,6 +574,7 @@
 		typedef ret##16 result_t;\
 		typedef int##16 int_t; \
 		typedef uint##16 uint_t; \
+		typedef float##16 float_t; \
 		content \
 	} \
 	INLINE FUNC_2(ret##8, func, argType0##8, argName0, argType1##8, argName1) \
@@ -577,6 +584,7 @@
 		typedef ret##8 result_t;\
 		typedef int##8 int_t; \
 		typedef uint##8 uint_t; \
+		typedef float##8 float_t; \
 		content \
 	} \
 	INLINE FUNC_2(ret##4, func, argType0##4, argName0, argType1##4, argName1) \
@@ -586,6 +594,7 @@
 		typedef ret##4 result_t;\
 		typedef int##4 int_t; \
 		typedef uint##4 uint_t; \
+		typedef float##4 float_t; \
 		content \
 	} \
 	INLINE FUNC_2(ret##3, func, argType0##3, argName0, argType1##3, argName1) \
@@ -595,6 +604,7 @@
 		typedef ret##3 result_t;\
 		typedef int##3 int_t; \
 		typedef uint##3 uint_t; \
+		typedef float##3 float_t; \
 		content \
 	} \
 	INLINE FUNC_2(ret##2, func, argType0##2, argName0, argType1##2, argName1) \
@@ -604,6 +614,7 @@
 		typedef ret##2 result_t;\
 		typedef int##2 int_t; \
 		typedef uint##2 uint_t; \
+		typedef float##2 float_t; \
 		content \
 	} \
 	INLINE FUNC_2(ret, func, argType0, argName0, argType1, argName1) \
@@ -613,6 +624,7 @@
 		typedef ret result_t;\
 		typedef int int_t; \
 		typedef uint uint_t; \
+		typedef float float_t; \
 		content \
 	}
 #endif
