@@ -7,6 +7,7 @@ cmake_minimum_required (VERSION 3.1)
 option(BUILD_DEB_PACKAGE "Enables creating .deb package" ON)
 # Option whether to compile for raspberry-pi (default: ON, for the compatibility)
 option(CROSS_COMPILE "Cross compile for Raspbian" ON)
+option(BUILD_EXPERIMENTAL "Build experimental test program" OFF)
 
 if(NOT BUILD_NUMBER)
 	set(BUILD_NUMBER 9999)
@@ -29,6 +30,10 @@ target_include_directories(VC4CLStdLib PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/" DESTINATION include/vc4cl-stdlib FILES_MATCHING PATTERN "*.h")
 # Adds custom uninstall command
 add_custom_target(uninstall "${CMAKE_COMMAND}" -P "cmake_uninstall.cmake")
+
+if (BUILD_EXPERIMENTAL)
+    add_subdirectory(experimental)
+endif (BUILD_EXPERIMENTAL)
 
 ####
 # Building package
