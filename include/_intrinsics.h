@@ -119,8 +119,6 @@ OVERLOAD_1(float, vc4cl_sfu_exp2, float, val)
 /*
  * Periphery access
  */
-void vc4cl_semaphore_increment(uchar semaphore);
-void vc4cl_semaphore_decrement(uchar semaphore);
 void vc4cl_mutex_lock(void);
 void vc4cl_mutex_unlock(void);
 //read DMA without locking the mutex

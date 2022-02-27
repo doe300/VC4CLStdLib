@@ -9,7 +9,6 @@
 
 #include "_config.h"
 #include "_intrinsics.h"
-#include "_flags.h"
 
 #define SIMPLE_INTEGER_2(func, argName0, argName1, content) \
 		SIMPLE_2(uchar, func, uchar, argName0, uchar, argName1, content) \
