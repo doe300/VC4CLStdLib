@@ -17,6 +17,7 @@
 #include <limits>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <unistd.h> // geteuid()
 #include <vector>
@@ -37,10 +38,56 @@ struct Range
 	float max;
 };
 
+struct ReferenceFunction
+{
+	ReferenceFunction(float (*func)(float)) : numParameters(1), ptr(reinterpret_cast<void *>(func)) {}
+	ReferenceFunction(float (*func)(float, float)) : numParameters(2), ptr(reinterpret_cast<void *>(func)) {}
+	ReferenceFunction(float (*func)(float, float, float)) : numParameters(3), ptr(reinterpret_cast<void *>(func)) {}
+
+	float operator()(float val) const
+	{
+		if(numParameters != 1)
+			throw std::runtime_error{"Reference function called with the wrong number of arguments"};
+		return reinterpret_cast<float (*)(float)>(ptr)(val);
+	}
+
+	float operator()(float val0, float val1) const
+	{
+		if(numParameters != 2)
+			throw std::runtime_error{"Reference function called with the wrong number of arguments"};
+		return reinterpret_cast<float (*)(float, float)>(ptr)(val0, val1);
+	}
+
+	float operator()(float val0, float val1, float val2) const
+	{
+		if(numParameters != 3)
+			throw std::runtime_error{"Reference function called with the wrong number of arguments"};
+		return reinterpret_cast<float (*)(float, float, float)>(ptr)(val0, val1, val2);
+	}
+
+	std::vector<float> operator()(const std::vector<std::vector<float>> &inputs) const
+	{
+		std::vector<float> out(inputs.front().size());
+		for(std::size_t i = 0; i < out.size(); ++i)
+		{
+			if(numParameters == 1)
+				out[i] = (*this)(inputs[0][i]);
+			if(numParameters == 2)
+				out[i] = (*this)(inputs[0][i], inputs[1][i]);
+			if(numParameters == 3)
+				out[i] = (*this)(inputs[0][i], inputs[1][i], inputs[2][i]);
+		}
+		return out;
+	}
+
+	uint8_t numParameters;
+	void *ptr;
+};
+
 struct Test
 {
 	std::string name;
-	float (*reference)(float);
+	ReferenceFunction reference;
 	uint32_t allowedErrorInUlp;
 	std::string sourceFile;
 	std::vector<Range> ranges;
@@ -68,7 +115,16 @@ static const std::vector<Test> floatTests = {
 		{
 			{-10.0f, 10.0f}, {std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max()} // full range
 		}},
-};
+	Test{"cbrt", cbrtf, 4, "cbrt.cl",
+		{
+			{-1.0, 1.0}, // limited range for precision testing
+			{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max()} // full range
+		}},
+	Test{"fma", fmaf, 0, "fma.cl",
+		{
+			{-100.0f, 100.0f}, // reduced range to not run into NaN/Inf
+			{std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max()} // full range
+		}}};
 
 static std::vector<float> generateInputData(const Range &range, uint32_t numLinear, uint32_t numRandom)
 {
@@ -88,6 +144,15 @@ static std::vector<float> generateInputData(const Range &range, uint32_t numLine
 	return data;
 }
 
+static std::vector<std::vector<float>> generateInputData(
+	const Range &range, uint32_t numLinear, uint32_t numRandom, uint8_t numInputs)
+{
+	std::vector<std::vector<float>> data{};
+	for(uint8_t i = 0; i < numInputs; ++i)
+		data.emplace_back(generateInputData(range, numLinear, numRandom));
+	return data;
+}
+
 static std::vector<cl::Kernel> createKernels(const cl::Context &context, const Test &test)
 {
 	std::stringstream ss;
@@ -104,7 +169,7 @@ static std::vector<cl::Kernel> createKernels(const cl::Context &context, const T
 
 struct ErrorResult
 {
-	float inputValue;
+	std::vector<float> inputValues;
 	float expected;
 	float actual;
 	uint32_t errorInUlp;
@@ -116,7 +181,28 @@ struct ErrorResult
 			return true;
 		if(errorInUlp < other.errorInUlp)
 			return false;
-		return inputValue < other.inputValue;
+		return inputValues < other.inputValues;
+	}
+
+	friend std::ostream &operator<<(std::ostream &os, const ErrorResult &error)
+	{
+		os << "Error of " << error.errorInUlp << " ULP for ";
+		if(error.inputValues.size() == 1)
+			os << std::scientific << error.inputValues.front();
+		else if(error.inputValues.size() == 2)
+			os << std::scientific << '{' << error.inputValues.front() << ", " << error.inputValues.back() << '}';
+		else if(error.inputValues.size() == 3)
+			os << std::scientific << '{' << error.inputValues[0] << ", " << error.inputValues[1] << ", "
+			   << error.inputValues[2] << '}';
+		else
+		{
+			os << '{';
+			for(auto input : error.inputValues)
+				os << std::scientific << input << ", ";
+			os << '}';
+		}
+		os << ", expected " << error.expected << ", got " << error.actual << std::defaultfloat;
+		return os;
 	}
 };
 
@@ -146,7 +232,7 @@ static uint32_t calculateError(float reference, float result, uint32_t allowedEr
 	return static_cast<uint32_t>(std::abs(bit_cast<int32_t>(reference) - bit_cast<int32_t>(result)));
 }
 
-static std::pair<std::vector<ErrorResult>, uint32_t> checkResults(const std::vector<float> &input,
+static std::pair<std::vector<ErrorResult>, uint32_t> checkResults(const std::vector<std::vector<float>> &inputs,
 	const std::vector<float> &reference, const std::vector<float> &result, uint32_t allowedErrorInUlp)
 {
 	std::vector<ErrorResult> errors;
@@ -157,7 +243,12 @@ static std::pair<std::vector<ErrorResult>, uint32_t> checkResults(const std::vec
 		auto error = calculateError(reference.at(i), result.at(i), allowedErrorInUlp);
 		maxError = std::max(maxError, error);
 		if(error > allowedErrorInUlp)
-			errors.emplace_back(ErrorResult{input.at(i), reference.at(i), result.at(i), error});
+		{
+			std::vector<float> errorInputs;
+			for(const auto &input : inputs)
+				errorInputs.push_back(input.at(i));
+			errors.emplace_back(ErrorResult{std::move(errorInputs), reference.at(i), result.at(i), error});
+		}
 	}
 
 	std::sort(errors.begin(), errors.end());
@@ -175,21 +266,24 @@ static void runTest(
 
 	for(const auto &range : test.ranges)
 	{
-		auto input = generateInputData(range, numLinear, numRandom);
-		cl::NDRange globalSize(input.size() / 16);
-		std::vector<float> reference(input.size());
-		std::transform(input.begin(), input.end(), reference.begin(), test.reference);
+		auto inputs = generateInputData(range, numLinear, numRandom, test.reference.numParameters);
+		auto inputSize = inputs.front().size();
+		cl::NDRange globalSize(inputSize / 16);
+		std::vector<float> reference = test.reference(inputs);
 
-		cl::Buffer inputBuffer(queue, input.begin(), input.end(), true);
-		cl::Buffer outputBuffer(context, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, input.size() * sizeof(float));
+		std::vector<cl::Buffer> inputBuffers;
+		for(auto &input : inputs)
+			inputBuffers.emplace_back(queue, input.begin(), input.end(), true);
+		cl::Buffer outputBuffer(context, CL_MEM_READ_WRITE | CL_MEM_HOST_READ_ONLY, inputSize * sizeof(float));
 
 		for(auto &kernel : kernels)
 		{
 			kernel.setArg(0, outputBuffer);
-			kernel.setArg(1, inputBuffer);
+			for(std::size_t i = 0; i < inputBuffers.size(); ++i)
+				kernel.setArg(1 + i, inputBuffers[i]);
 
 			std::cout << "\tRunning kernel '" << kernel.getInfo<CL_KERNEL_FUNCTION_NAME>() << "' with "
-					  << (input.size() / 16) << " work-items ... " << std::endl;
+					  << (inputSize / 16) << " work-items ... " << std::endl;
 			auto start = std::chrono::steady_clock::now();
 			cl::Event kernelEvent{};
 			queue.enqueueNDRangeKernel(kernel, cl::NullRange, globalSize, cl::NullRange, nullptr, &kernelEvent);
@@ -214,15 +308,13 @@ static void runTest(
 						  << std::endl;
 			}
 
-			std::vector<float> result(input.size());
-			queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, input.size() * sizeof(float), result.data());
-			auto errors = checkResults(input, reference, result, test.allowedErrorInUlp);
+			std::vector<float> result(inputSize);
+			queue.enqueueReadBuffer(outputBuffer, CL_TRUE, 0, inputSize * sizeof(float), result.data());
+			auto errors = checkResults(inputs, reference, result, test.allowedErrorInUlp);
 			std::cout << "\t- Has " << errors.first.size() << " wrong results and a maximum error of " << errors.second
 					  << " ULP (of allowed " << test.allowedErrorInUlp << " ULP)" << std::endl;
 			for(std::size_t i = 0; i < std::min(errors.first.size(), std::size_t{8}); ++i)
-				std::cout << "\t\tError of " << errors.first[i].errorInUlp << " ULP for " << std::scientific
-						  << errors.first[i].inputValue << ", expected " << errors.first[i].expected << ", got "
-						  << errors.first[i].actual << std::defaultfloat << std::endl;
+				std::cout << "\t\t" << errors.first[i] << std::endl;
 			if(errors.first.size() > 8)
 				std::cout << "\t\t[...]" << std::endl;
 		}
