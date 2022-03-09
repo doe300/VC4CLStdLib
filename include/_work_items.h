@@ -59,15 +59,12 @@ INLINE size_t get_global_offset(uint dim) OVERLOADABLE CONST
 
 INLINE size_t get_global_linear_id() OVERLOADABLE CONST
 {
-	return ((vc4cl_global_id(2) - vc4cl_global_offset(2)) * vc4cl_global_size(1) * vc4cl_global_size(0)) +
-		((vc4cl_global_id(1) - vc4cl_global_offset(1)) * vc4cl_global_size(0)) +
-		(vc4cl_global_id(0) - vc4cl_global_offset(0));
+	return vc4cl_global_linear_id();
 }
 
 INLINE size_t get_local_linear_id() OVERLOADABLE CONST
 {
-	return (vc4cl_local_id(2) * vc4cl_local_size(1) * vc4cl_local_size(0)) + (vc4cl_local_id(1) * vc4cl_local_size(0)) +
-		vc4cl_local_id(0);
+	return vc4cl_local_linear_id();
 }
 
 #endif /* VC4CL_WORK_ITEMS_H */

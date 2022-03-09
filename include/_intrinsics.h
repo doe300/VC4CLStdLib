@@ -241,6 +241,8 @@ PURE uint vc4cl_group_id(uint dim);
 PURE uint vc4cl_global_offset(uint dim);
 PURE uint vc4cl_global_size(uint dim);
 PURE uint vc4cl_global_id(uint dim);
+PURE uchar vc4cl_local_linear_id(void);
+PURE uint vc4cl_global_linear_id(void);
 
 /*
  * Image functions
